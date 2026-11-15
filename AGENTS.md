@@ -43,3 +43,5 @@ use the editor.
 - Mori UI composes AI Elements conversation, message, tool and composer primitives; assistant borders intentionally match the supplied chat references.
 - Collection tabs read only owner-scoped live rows; shared browser-safe helpers govern card pagination and session notices, while collection changes go through Mori confirmation.
 - Grail slots must remain empty until explicit grail selections and real slab-photo data exist; ordinary card images must not be presented as slab photos.
+- Mori initialization keys on user identity rather than session tokens; profile failures are retryable and onboarding saves upsert the owned profile before entering chat.
+- Photo ownership is validated at the chat boundary and memory proposal, with private storage policies restricting every operation to the owner's first path segment.

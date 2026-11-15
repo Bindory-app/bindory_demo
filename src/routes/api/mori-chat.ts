@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { ownMessagePhotos } from "@/lib/mori-validation";
 
 export const Route = createFileRoute("/api/mori-chat")({
   server: {
@@ -32,6 +33,8 @@ export const Route = createFileRoute("/api/mori-chat")({
           return new Response("Invalid message", { status: 400 });
         const message = body.message.trim();
         const userId = auth.user.id;
+        if (!ownMessagePhotos(message, userId, "photo_path" in body ? body.photo_path : undefined))
+          return new Response("Photo must belong to you", { status: 403 });
         const encoder = new TextEncoder();
         const abort = new AbortController();
         request.signal.addEventListener("abort", () => abort.abort(), { once: true });

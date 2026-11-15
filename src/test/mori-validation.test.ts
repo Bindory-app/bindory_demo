@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateWriteArgs, ownPhotoPath } from "@/lib/mori-validation";
+import { validateWriteArgs, ownPhotoPath, ownMessagePhotos } from "@/lib/mori-validation";
 
 describe("Mori writing tools", () => {
   it("requires a one-line reason for every binder card", () => {
@@ -26,5 +26,16 @@ describe("Mori writing tools", () => {
   it("rejects another collector's private photo", () => {
     expect(ownPhotoPath("other/photo.jpg", "collector")).toBe(false);
     expect(ownPhotoPath("collector/photo.jpg", "collector")).toBe(true);
+  });
+  it("rejects foreign photo paths at the chat boundary", () => {
+    expect(ownMessagePhotos("Photo [photo_path: other/photo.jpg]", "collector")).toBe(false);
+    expect(ownMessagePhotos('Photo {"photo_path":"other/photo.jpg"}', "collector")).toBe(false);
+    expect(ownMessagePhotos("Photo attached", "collector", "other/photo.jpg")).toBe(false);
+    expect(ownMessagePhotos("Photo [photo_path: collector/photo.jpg]", "collector")).toBe(true);
+  });
+  it("rejects traversal and owner-prefix lookalikes", () => {
+    expect(ownPhotoPath("collector-other/photo.jpg", "collector")).toBe(false);
+    expect(ownPhotoPath("collector/../other/photo.jpg", "collector")).toBe(false);
+    expect(ownPhotoPath("collector/", "collector")).toBe(false);
   });
 });

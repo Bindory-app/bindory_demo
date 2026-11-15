@@ -32,5 +32,21 @@ export function validateWriteArgs(name: keyof typeof writeSchemas, args: unknown
 }
 
 export function ownPhotoPath(path: string | undefined, userId: string) {
-  return !path || (path.startsWith(`${userId}/`) && !path.includes(".."));
+  return (
+    !path ||
+    (path.startsWith(`${userId}/`) &&
+      path.length > userId.length + 1 &&
+      !path.includes("..") &&
+      !/[\\\u0000-\u001f]/.test(path))
+  );
+}
+
+export function ownMessagePhotos(message: string, userId: string, photoPath?: unknown) {
+  if (
+    photoPath !== undefined &&
+    (typeof photoPath !== "string" || !ownPhotoPath(photoPath, userId))
+  )
+    return false;
+  const matches = [...message.matchAll(/photo_path\s*["']?\s*:\s*["']?([^\]\s"',}]+)/gi)];
+  return matches.every((match) => ownPhotoPath(match[1], userId));
 }

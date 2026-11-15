@@ -25,6 +25,12 @@ import { savePendingIntent, takePendingIntent } from "@/lib/pending-intent";
 import { supabase } from "@/integrations/supabase/client";
 import { Mori } from "@/components/Mori";
 import { ONBOARDING_GREETING, onboardingSteps, searchCards } from "@/lib/onboarding";
+import {
+  canAcceptMessage,
+  greetingFor,
+  mergeDoneMessages,
+  shouldRefocusAfterReply,
+} from "@/lib/mori-chat-state";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -67,18 +73,24 @@ const fromRow = (r: Row): Msg => ({
   kind: r.kind,
   payload: r.kind === "confirm" ? (r.payload as ProposalPayload) : undefined,
 });
-type Phase = "guest" | "loading" | "onboarding" | "chat";
+type Phase = "guest" | "loading" | "profile-error" | "onboarding" | "chat";
 
 function GuestAskMori() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const { session, ready } = useSession();
   const [sheet, setSheet] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [profileRetry, setProfileRetry] = useState(0);
   const [phase, setPhase] = useState<Phase>("guest");
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [pending, setPending] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const searchBusy = useRef(false);
+  const intentRef = useRef<string | null>(null);
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
   const say = (...m: Msg[]) =>
     setMsgs((prev) => [...prev.map((x) => ({ ...x, chips: undefined })), ...m]);
@@ -91,7 +103,7 @@ function GuestAskMori() {
   const abortRef = useRef<AbortController | null>(null);
   const [streamText, setStreamText] = useState("");
   const [statusLines, setStatusLines] = useState<string[]>([]);
-  const [name, setName] = useState("collector");
+  const [name, setName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -110,7 +122,7 @@ function GuestAskMori() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token ?? ""}`,
+          Authorization: `Bearer ${sessionRef.current?.access_token ?? ""}`,
         },
         body: JSON.stringify({ message: t }),
         signal: abort.signal,
@@ -136,7 +148,7 @@ function GuestAskMori() {
           if (event.type === "done") {
             setStreamText("");
             setStatusLines([]);
-            say(...event.rows.map(fromRow));
+            setMsgs((previous) => mergeDoneMessages(previous, event.rows.map(fromRow)));
           }
           if (event.type === "error") throw new Error(event.text);
         }
@@ -149,7 +161,13 @@ function GuestAskMori() {
       setThinking(false);
       setStreamText("");
       setStatusLines([]);
-      inputRef.current?.focus();
+      if (
+        shouldRefocusAfterReply(
+          navigator.maxTouchPoints,
+          window.matchMedia("(pointer: coarse)").matches,
+        )
+      )
+        inputRef.current?.focus();
     }
   };
 
@@ -202,45 +220,78 @@ function GuestAskMori() {
 
   // On sign-in: new collectors get onboarding in chat, returning ones go straight on.
   useEffect(() => {
-    if (!session) {
+    const userId = session?.user.id;
+    let cancelled = false;
+    if (!userId) {
+      abortRef.current?.abort();
+      setMsgs([]);
+      setName("");
+      intentRef.current = null;
       setPhase("guest");
       return;
     }
     setSheet(false);
     setPhase("loading");
-    const intent = takePendingIntent();
+    const intent = intentRef.current ?? takePendingIntent();
+    intentRef.current = intent;
     void (async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("onboarded_at, display_name")
-        .eq("id", session.user.id)
-        .maybeSingle();
-      setName(data?.display_name?.split(" ")[0] || "collector");
-      if (error) console.error("Could not load profile", error);
-      if (data?.onboarded_at) {
-        setPhase("chat");
-        try {
-          setMsgs((await history_()).map(fromRow));
-        } catch (e) {
-          console.error(e);
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("onboarded_at, display_name")
+          .eq("id", userId)
+          .maybeSingle();
+        if (cancelled) return;
+        if (error) {
+          setPhase("profile-error");
+          return;
         }
-        if (intent) void reply(intent);
-      } else {
-        setPending(intent);
-        setPhase("onboarding");
-        setStep(0);
-        setMsgs([{ from: "mori", text: ONBOARDING_GREETING }, ask(0)]);
+        setName(data?.display_name?.trim() || "");
+        if (data?.onboarded_at) {
+          setPhase("chat");
+          try {
+            const rows = await history_();
+            if (cancelled) return;
+            setMsgs(rows.map(fromRow));
+          } catch (e) {
+            console.error(e);
+          }
+          if (cancelled) return;
+          intentRef.current = null;
+          if (intent) void reply(intent);
+        } else {
+          setPending(intent);
+          setPhase("onboarding");
+          setStep(0);
+          setAnswers({});
+          setMsgs([{ from: "mori", text: ONBOARDING_GREETING }, ask(0)]);
+        }
+      } catch {
+        if (!cancelled) setPhase("profile-error");
       }
     })();
-  }, [session]);
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user.id, profileRetry]);
 
   const finishOnboarding = async (all: Record<string, string>) => {
     if (!session) return;
     const { error } = await supabase
       .from("profiles")
-      .update({ onboarding_answers: all, onboarded_at: new Date().toISOString() })
-      .eq("id", session.user.id);
-    if (error) console.error("Could not save onboarding answers", error);
+      .upsert(
+        { id: session.user.id, onboarding_answers: all, onboarded_at: new Date().toISOString() },
+        { onConflict: "id" },
+      );
+    if (error) {
+      say({
+        from: "mori",
+        text: "Sorry, I could not save your answers. Please try again.",
+        chips: [{ label: "Retry saving answers" }],
+      });
+      return;
+    }
+    intentRef.current = null;
     setPhase("chat");
     if (pending) {
       say({
@@ -273,10 +324,13 @@ function GuestAskMori() {
   };
 
   const typedCard = async (q: string) => {
+    if (searchBusy.current) return;
+    searchBusy.current = true;
     say({ from: "me", text: q });
     setBusy(true);
     const matches = await searchCards(q).catch(() => []);
     setBusy(false);
+    searchBusy.current = false;
     if (!matches.length) {
       say({
         from: "mori",
@@ -293,6 +347,8 @@ function GuestAskMori() {
   };
 
   const tapChip = (label: string) => {
+    if (!canAcceptMessage(phase, thinking, searchBusy.current)) return;
+    if (label === "Retry saving answers") return void finishOnboarding(answers);
     if (phase === "onboarding") return answerStep(label);
     if (label === "Not now") {
       setPending(null);
@@ -311,7 +367,7 @@ function GuestAskMori() {
 
   const send = (t: string) => {
     if (!t.trim()) return;
-    if (thinking || phase === "loading") return;
+    if (!canAcceptMessage(phase, thinking, searchBusy.current)) return;
     setText("");
     if (!session) {
       savePendingIntent(t);
@@ -325,7 +381,10 @@ function GuestAskMori() {
     if (thinking) return;
     void reply(t);
   };
-  const openAuth = () => setSheet(true);
+  const openAuth = (mode: "login" | "signup") => {
+    setAuthMode(mode);
+    setSheet(true);
+  };
   const showNav = phase === "chat";
   return (
     <div className="min-h-screen overflow-x-hidden bg-canvas-outer">
@@ -351,13 +410,13 @@ function GuestAskMori() {
             <div className="flex shrink-0 gap-1.5">
               <Button
                 variant="outline"
-                onClick={openAuth}
+                onClick={() => openAuth("login")}
                 className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground"
               >
                 Log in
               </Button>
               <Button
-                onClick={openAuth}
+                onClick={() => openAuth("signup")}
                 className="rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-primary-foreground"
               >
                 Sign up
@@ -371,13 +430,21 @@ function GuestAskMori() {
             <div className="flex flex-1 items-center justify-center">
               <Mori className="h-40 w-40 animate-pulse" />
             </div>
+          ) : phase === "profile-error" ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+              <p role="alert">Sorry, I could not load your profile</p>
+              <Button
+                onClick={() => setProfileRetry((previous) => previous + 1)}
+                className="rounded-full"
+              >
+                Retry
+              </Button>
+            </div>
           ) : msgs.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center">
               <Mori className="h-52 w-52" />
               <h1 className="mt-4 text-2xl font-bold leading-snug">
-                {showNav
-                  ? `Hi ${name}, what shall we do today?`
-                  : "Hi, I am Mori. What shall we do today?"}
+                {showNav ? greetingFor(name) : "Hi, I am Mori. What shall we do today?"}
               </h1>
               <div className="mt-6 grid w-full grid-cols-2 gap-2.5">
                 {starters.map(({ label, icon: Icon }) => (
@@ -453,7 +520,6 @@ function GuestAskMori() {
               onChange={(event) => setText(event.target.value)}
               aria-label="Message Mori"
               placeholder={showNav ? "Ask, add, remember or create" : ""}
-              autoFocus
               className="min-h-10 text-sm"
             />
             <PromptInputFooter className="justify-between px-2 pb-2">
@@ -483,7 +549,10 @@ function GuestAskMori() {
               <PromptInputSubmit
                 status={thinking ? (streamText ? "streaming" : "submitted") : "ready"}
                 onStop={() => abortRef.current?.abort()}
-                disabled={!thinking && !text.trim()}
+                disabled={
+                  !thinking &&
+                  (!text.trim() || busy || phase === "loading" || phase === "profile-error")
+                }
                 className="size-10 rounded-full"
                 aria-label={thinking ? "Stop" : "Send"}
               />
@@ -491,7 +560,12 @@ function GuestAskMori() {
           </PromptInput>
         </div>
         {showNav && <BottomNav home />}
-        <AuthSheet open={sheet} onOpenChange={setSheet} />
+        <AuthSheet
+          open={sheet}
+          onOpenChange={setSheet}
+          mode={authMode}
+          onModeChange={setAuthMode}
+        />
       </div>
     </div>
   );

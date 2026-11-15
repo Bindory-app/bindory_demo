@@ -6,6 +6,9 @@
 - [x] Verify signed-in cards, tab actions, notice dismissal and Add-to-Mori replay on phone and desktop; pagination/search rules passed tests.
 - [ ] Match collection screenshots and populate grail slab photos — waiting for collection screenshots and actual grail photos/selections.
 ## Mori chat
+- [x] Fix identity-only initialization, profile retry/upsert, touch focus, auth modes, duplicate messages and onboarding search guards.
+- [x] Validate photo ownership at the chat boundary and memory tool; enforce private owner-folder storage policies.
+- [x] Run 19 regressions; verify live signed-in token refresh, chat, touch focus, boundary rejection and owner/foreign storage access. Verify profile retry and missing-profile onboarding with intercepted browser responses.
 - [x] Strengthen saved history, tool validation and confirmation safeguards.
 - [x] Stream replies and show tool status while Mori works.
 - [x] Apply supplied chat presentation and formatted replies using AI Elements.
