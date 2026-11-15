@@ -1,0 +1,3 @@
+create policy "own memory photos select" on storage.objects for select to authenticated using (bucket_id = 'memory-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "own memory photos insert" on storage.objects for insert to authenticated with check (bucket_id = 'memory-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "own memory photos delete" on storage.objects for delete to authenticated using (bucket_id = 'memory-photos' and (storage.foldername(name))[1] = auth.uid()::text);

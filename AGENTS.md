@@ -32,6 +32,7 @@ use the editor.
 - Brand tokens and phone shell live in src/styles.css and src/components/AppShell.tsx; signed-in pages wrap in AppShell; Ask Mori at / renders its own shell and shows the bottom bar only when signed in.
 - Guest actions on / save the request (src/lib/pending-intent.ts) and open AuthSheet; after sign-in the saved request is replayed so the conversation continues.
 - All user tables are owner-only via RLS on user_id = auth.uid(); profiles row is created by a trigger on auth.users.
-- Mori replies come only from src/lib/data.ts via src/lib/mori.ts so Mori never invents facts.
+- Mori chat runs in TanStack server functions (src/lib/mori.functions.ts) via the Lovable AI Gateway with tool calls, not Supabase Edge Functions; writing tools only create a pending confirm message and data is written by confirmProposal after the user taps Confirm.
+- Points are awarded by database triggers on cards/memories inserts; clients cannot insert points_events.
 - New-user onboarding runs inside the Ask Mori chat (steps in src/lib/onboarding.ts); profiles.onboarded_at decides whether it runs, and the bottom bar stays hidden until it finishes.
 - All card lookups go through src/lib/tcgdex.ts (TCGdex search + detail); images are hotlinked via cardImage() and never stored.

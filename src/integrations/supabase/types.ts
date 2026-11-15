@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           id: string
           position: number
+          reason: string | null
           user_id: string
         }
         Insert: {
@@ -29,6 +30,7 @@ export type Database = {
           created_at?: string
           id?: string
           position?: number
+          reason?: string | null
           user_id?: string
         }
         Update: {
@@ -37,6 +39,7 @@ export type Database = {
           created_at?: string
           id?: string
           position?: number
+          reason?: string | null
           user_id?: string
         }
         Relationships: [
@@ -59,18 +62,21 @@ export type Database = {
       binders: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           name: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           name: string
           user_id?: string
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
           user_id?: string
@@ -81,62 +87,86 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          illustrator: string | null
           image_url: string | null
           name: string
           number: string | null
+          rarity: string | null
+          set_id: string | null
           set_name: string | null
           tcgdex_id: string
           user_id: string
+          year: number | null
         }
         Insert: {
           created_at?: string
           id?: string
+          illustrator?: string | null
           image_url?: string | null
           name: string
           number?: string | null
+          rarity?: string | null
+          set_id?: string | null
           set_name?: string | null
           tcgdex_id: string
           user_id?: string
+          year?: number | null
         }
         Update: {
           created_at?: string
           id?: string
+          illustrator?: string | null
           image_url?: string | null
           name?: string
           number?: string | null
+          rarity?: string | null
+          set_id?: string | null
           set_name?: string | null
           tcgdex_id?: string
           user_id?: string
+          year?: number | null
         }
         Relationships: []
       }
       memories: {
         Row: {
+          card_tcgdex_id: string | null
           created_at: string
           happened_on: string | null
           id: string
           is_private: boolean
           note: string | null
+          photo_path: string | null
+          place: string | null
           title: string
           user_id: string
+          with_whom: string | null
         }
         Insert: {
+          card_tcgdex_id?: string | null
           created_at?: string
           happened_on?: string | null
           id?: string
           is_private?: boolean
           note?: string | null
+          photo_path?: string | null
+          place?: string | null
           title: string
           user_id?: string
+          with_whom?: string | null
         }
         Update: {
+          card_tcgdex_id?: string | null
           created_at?: string
           happened_on?: string | null
           id?: string
           is_private?: boolean
           note?: string | null
+          photo_path?: string | null
+          place?: string | null
           title?: string
           user_id?: string
+          with_whom?: string | null
         }
         Relationships: []
       }
@@ -145,6 +175,8 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          kind: string
+          payload: Json | null
           role: string
           user_id: string
         }
@@ -152,6 +184,8 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          kind?: string
+          payload?: Json | null
           role: string
           user_id?: string
         }
@@ -159,7 +193,36 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          kind?: string
+          payload?: Json | null
           role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      points_events: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          points: number
+          ref_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          points: number
+          ref_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          points?: number
+          ref_id?: string | null
           user_id?: string
         }
         Relationships: []
@@ -191,6 +254,36 @@ export type Database = {
           onboarded_at?: string | null
           onboarding_answers?: Json | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      wishlist: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          name: string
+          note: string | null
+          tcgdex_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name: string
+          note?: string | null
+          tcgdex_id: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          note?: string | null
+          tcgdex_id?: string
+          user_id?: string
         }
         Relationships: []
       }

@@ -15,6 +15,20 @@
       "when": 1794720507501,
       "tag": "0001_profile_onboarding",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794721148512,
+      "tag": "0002_mori_agent",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794721159225,
+      "tag": "0003_memory_photos_policies",
+      "breakpoints": true
     }
   ]
 }

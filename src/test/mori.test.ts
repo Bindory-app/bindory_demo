@@ -34,3 +34,15 @@ describe("TCGdex images", () => {
     expect(cardImage("https://assets.tcgdex.net/en/base/base1/4")).toBe("https://assets.tcgdex.net/en/base/base1/4/high.webp");
   });
 });
+import { isWriteTool, TOOL_STATUS, POINTS } from "@/lib/mori-tools";
+describe("Mori agent tools", () => {
+  it("requires confirmation for every writing tool", () => {
+    for (const t of ["add_card_to_collection", "create_binder", "save_memory", "add_to_wishlist"]) expect(isWriteTool(t)).toBe(true);
+    expect(isWriteTool("search_catalogue")).toBe(false);
+  });
+  it("uses the requested status lines", () => {
+    expect(TOOL_STATUS["search_catalogue"]).toBe("Searching the card catalogue");
+    expect(TOOL_STATUS["save_memory"]).toBe("Checking what is missing");
+    expect(TOOL_STATUS["create_binder"]).toBe("Designing a binder");
+  });
+});
