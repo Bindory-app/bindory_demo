@@ -29,5 +29,5 @@ use the editor.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
 
-- Brand tokens and phone shell live in src/styles.css and src/components/AppShell.tsx; every page wraps in AppShell so the 390px column and bottom bar stay consistent.
+- Brand tokens and phone shell live in src/styles.css and src/components/AppShell.tsx; signed-in pages wrap in AppShell, while the guest Ask Mori screen at / renders its own shell without the bottom bar.
 - Mori replies come only from src/lib/data.ts via src/lib/mori.ts so Mori never invents facts.

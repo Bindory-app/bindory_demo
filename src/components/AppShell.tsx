@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Home, Search, Layers, User, Moon, Sun } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { Mori } from "./Mori";
+import faceAsset from "@/assets/mori-face.png.asset.json";
 
 export function useTheme() {
   const [dark, setDark] = useState(false);
@@ -46,11 +46,11 @@ function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-1/2 z-20 w-full max-w-[390px] -translate-x-1/2 border-t border-border bg-card/95 px-2 pb-3 backdrop-blur">
       <div className="flex items-end">
-        <Link to="/" className={item} {...linkProps}><Home className="h-5 w-5" />Home</Link>
+        <Link to="/home" className={item} {...linkProps}><Home className="h-5 w-5" />Home</Link>
         <Link to="/search" className={item} {...linkProps}><Search className="h-5 w-5" />Search</Link>
         <Link to="/mori" className={item} {...linkProps}>
-          <span className="-mt-8 grid h-16 w-16 place-items-center rounded-full bg-brand p-1.5 shadow-orb ring-4 ring-card">
-            <Mori className="h-full w-full" alt="" />
+          <span className="-mt-8 grid h-16 w-16 place-items-center rounded-full bg-brand p-2 shadow-orb ring-4 ring-card">
+            <img src={faceAsset.url} alt="" className="h-full w-full object-contain" />
           </span>
           Ask Mori
         </Link>

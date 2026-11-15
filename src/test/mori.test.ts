@@ -9,3 +9,9 @@ describe("Mori", () => {
     expect(r).not.toMatch(/\b10\b/);
   });
 });
+import { guestReply } from "@/lib/mori";
+describe("Guest Mori", () => {
+  it("does not invent a collection for guests", () => {
+    expect(guestReply("what do I own?")).toContain("I could not find any");
+  });
+});
