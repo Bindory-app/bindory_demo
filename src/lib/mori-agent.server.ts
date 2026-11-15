@@ -21,7 +21,8 @@ import {
 
 type DB = SupabaseClient<Database>;
 // Any tool-capable model ID from https://ai-gateway.vercel.sh/v1/models; override with AI_GATEWAY_MODEL.
-const MODEL = process.env["AI_GATEWAY_MODEL"] || "anthropic/claude-haiku-5.5";
+// Default is on the AI Gateway free tier; newer models need paid credits.
+const MODEL = process.env["AI_GATEWAY_MODEL"] || "google/gemini-2.5-flash";
 
 const SYSTEM = `You are Mori, a warm, concise Pokémon TCG collector agent inside the Bindory app. Keep replies short (1-3 sentences), friendly, US English, sentence case.
 You can only act through your tools: search_catalogue, add_card_to_collection, suggest_binder_for_card, create_binder, save_memory, add_to_wishlist, find_related_cards, list_my_cards, find_collectors.
