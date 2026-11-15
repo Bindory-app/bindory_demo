@@ -38,3 +38,4 @@ use the editor.
 - All card lookups go through src/lib/tcgdex.ts (TCGdex search + detail); images are hotlinked via cardImage() and never stored.
 - Home event destinations have dedicated routes; unavailable public showcase data renders an honest empty state rather than invented collectors.
 - Home progress uses owner-scoped collection and binder membership reads; daily prompt rotation and dismissal keys live in a shared browser-safe helper for deterministic testing.
+- Home uses an opt-in AppShell presentation and an Embla event carousel; other screens keep their existing shell and navigation presentation.

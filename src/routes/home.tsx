@@ -1,15 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowUpRight, CalendarDays, MessageCircle, Sparkles, Star } from "lucide-react";
+import { Mic, Star } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { AppShell, ThemeToggle } from "@/components/AppShell";
+import { AppShell } from "@/components/AppShell";
+import { HomeEvents } from "@/components/HomeEvents";
 import { HomeProgress } from "@/components/HomeProgress";
 import { Button } from "@/components/ui/button";
 import { Mori } from "@/components/Mori";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/use-session";
 import { savePendingIntent } from "@/lib/pending-intent";
-import { HOME_EVENTS, memoryPromptKey, memoryQuestion } from "@/lib/home-content";
+import { memoryPromptKey, memoryQuestion } from "@/lib/home-content";
+import { cardImage, getCard } from "@/lib/tcgdex";
 
 export const Route = createFileRoute("/home")({
   head: () => ({ meta: [
@@ -23,10 +25,10 @@ export const Route = createFileRoute("/home")({
 });
 
 export const IDEAS = [
-  { title: "Log my Japan trip", note: "Turn your trip into memories" },
-  { title: "Group your moon themed cards", note: "Mori finds them for you" },
-  { title: "Finish your next binder page", note: "See what is missing" },
-  { title: "Make a story card", note: "Share the why behind a card" },
+  { title: "Log my Japan trip", kicker: "A place to remember", cardId: "neo3-9" },
+  { title: "Group your moon themed cards", kicker: "A theme you love", cardId: "swsh7-215" },
+  { title: "Finish your next binder page", kicker: "Finish a page", cardId: "neo1-9" },
+  { title: "Make a story card", kicker: "A story to keep", cardId: "sv03.5-151" },
 ];
 const carousel = "-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2";
 type OwnedCard = { id: string; tcgdex_id: string; set_id: string | null; image_url: string | null };
@@ -40,7 +42,20 @@ function Home() {
   const [journey, setJourney] = useState<OwnedCard[]>([]);
   const [prompt, setPrompt] = useState(false);
   const [question, setQuestion] = useState("");
+  const [ideaImages, setIdeaImages] = useState<Record<string, string>>({});
+  const [greeting, setGreeting] = useState("Good evening");
   const askMori = (text?: string) => { if (text) savePendingIntent(text); void navigate({ to: "/" }); };
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    setGreeting(hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
+    let active = true;
+    void Promise.all(IDEAS.map(async idea => {
+      const card = await getCard(idea.cardId).catch(() => null);
+      return [idea.cardId, cardImage(card?.image)] as const;
+    })).then(rows => { if (active) setIdeaImages(Object.fromEntries(rows.filter((row): row is readonly [string, string] => Boolean(row[1])))); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!session) { setName("collector"); setPoints(0); setArtworks([]); setJourney([]); return; }
@@ -83,19 +98,16 @@ function Home() {
     return () => clearTimeout(timer);
   }, [ready, session?.user.id]);
 
-  return <AppShell title={`Hi, ${name}`} action={<div className="flex items-center gap-2"><Button asChild className="rounded-full bg-brand px-3 font-bold"><Link to="/studio"><Star />{points} pts</Link></Button><ThemeToggle /></div>}>
-    <Button variant="outline" onClick={() => askMori()} className="h-12 w-full justify-start rounded-full bg-card px-4 text-muted-foreground shadow-none"><MessageCircle className="text-primary" />Ask Mori</Button>
-    <h2 className="mb-3 mt-6 text-lg font-bold">Events</h2>
+  return <AppShell home title="Home" greeting={`${greeting}, ${name}`} action={<Button asChild aria-label={`${points} points, open Mori Studio`} variant="secondary" className="h-11 rounded-2xl px-3 text-lg font-bold text-primary shadow-none"><Link to="/studio"><Star />{points}</Link></Button>}>
+    <Button variant="outline" onClick={() => askMori()} className="h-14 w-full justify-start gap-3 rounded-full border-2 bg-secondary/60 px-2 text-base font-bold text-muted-foreground shadow-none"><Mori className="h-10 w-10 shrink-0" />Ask Mori anything<Mic className="ml-auto mr-3 text-primary" /></Button>
+    <HomeEvents />
+    <h2 className="mb-2 mt-4 text-lg font-bold">Keep your set going</h2>
     <div className={carousel}>
-      {HOME_EVENTS.map(event => <Button asChild key={event.title} className={`h-40 w-72 shrink-0 snap-start flex-col items-start justify-between whitespace-normal rounded-3xl p-5 text-left text-primary-foreground shadow-none ${event.theme}`}><Link to={event.to}><span className="flex items-center gap-2 text-xs font-semibold"><CalendarDays />{event.label}</span><span className="flex w-full items-end justify-between gap-3"><span className="text-xl font-bold leading-snug">{event.title}</span><ArrowUpRight /></span></Link></Button>)}
+      <HomeProgress name="Favourite artworks" owned={artworks.length} target={20} onClick={() => askMori("Help me keep my Favourite artworks binder going toward 20 cards")} />
+      <HomeProgress name="151 Journey" owned={journey.length} target={165} onClick={() => askMori("What am I missing from my 151 Journey?")} />
     </div>
-    <h2 className="mb-3 mt-6 text-lg font-bold">Keep your set going</h2>
-    <div className={carousel}>
-      <HomeProgress name="Favourite artworks" owned={artworks.length} target={20} images={artworks.flatMap(card => card.image_url ? [card.image_url] : [])} onClick={() => askMori("Help me keep my Favourite artworks binder going toward 20 cards")} />
-      <HomeProgress name="151 Journey" owned={journey.length} target={165} images={journey.flatMap(card => card.image_url ? [card.image_url] : [])} onClick={() => askMori("What am I missing from my 151 Journey?")} />
-    </div>
-    <h2 className="mb-3 mt-6 text-lg font-bold">Ideas from Mori</h2>
-    <div className={carousel}>{IDEAS.map(idea => <Button variant="outline" key={idea.title} onClick={() => askMori(idea.title)} className="h-36 w-56 shrink-0 snap-start flex-col items-start justify-start gap-0 whitespace-normal rounded-3xl bg-card p-4 text-left shadow-none"><Sparkles className="text-primary" /><span className="mt-3 font-bold">{idea.title}</span><span className="mt-1 text-sm text-muted-foreground">{idea.note}</span></Button>)}</div>
-    <Dialog.Root open={prompt} onOpenChange={setPrompt}><Dialog.Portal><Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/30" /><Dialog.Content aria-describedby={undefined} className="fixed bottom-0 left-1/2 z-50 w-full max-w-[390px] -translate-x-1/2 rounded-t-3xl bg-card px-6 pb-8 pt-5 text-center outline-none"><Mori className="mx-auto h-32 w-32" /><p className="mt-3 text-xs font-semibold text-primary">Today’s memory prompt</p><Dialog.Title className="mt-2 text-xl font-bold leading-snug">{question}</Dialog.Title><Button onClick={() => { setPrompt(false); askMori(question); }} className="mt-6 h-12 w-full rounded-full bg-brand font-bold">Tell Mori</Button><Dialog.Close asChild><Button variant="ghost" className="mt-2 h-11 w-full rounded-full text-muted-foreground">Later</Button></Dialog.Close></Dialog.Content></Dialog.Portal></Dialog.Root>
+    <h2 className="mb-2 mt-5 text-lg font-bold">Ideas from Mori</h2>
+    <div className={carousel}>{IDEAS.map(idea => <Button variant="outline" key={idea.title} onClick={() => askMori(idea.title)} className="h-[206px] w-[162px] shrink-0 snap-start flex-col items-start justify-start gap-0 whitespace-normal rounded-2xl border-border bg-card p-2 text-left text-foreground shadow-none">{ideaImages[idea.cardId] ? <img src={ideaImages[idea.cardId]} alt="" className="h-[116px] w-full rounded-xl object-contain" /> : <div className="h-[116px] w-full rounded-xl bg-accent" />}<span className="mt-2 text-[10px] font-bold text-primary">{idea.kicker}</span><span className="mt-1 text-sm font-bold leading-snug">{idea.title}</span></Button>)}</div>
+    <Dialog.Root open={prompt} onOpenChange={setPrompt}><Dialog.Portal><Dialog.Overlay className="fixed inset-0 z-40 bg-transparent" /><Dialog.Content aria-describedby={undefined} className="fixed bottom-[92px] left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-[358px] -translate-x-1/2 grid-cols-[42px_minmax(0,1fr)] gap-x-3 rounded-3xl border border-border bg-card p-4 shadow-orb outline-none"><Mori className="h-12 w-10" /><div><p className="text-[11px] font-bold text-primary">Today’s memory prompt</p><Dialog.Title className="mt-1 text-base font-bold leading-snug">{question}</Dialog.Title><div className="mt-3 flex gap-2"><Button onClick={() => { setPrompt(false); askMori(question); }} className="rounded-full font-bold">Tell Mori</Button><Dialog.Close asChild><Button variant="outline" className="rounded-full font-bold">Later</Button></Dialog.Close></div></div></Dialog.Content></Dialog.Portal></Dialog.Root>
   </AppShell>;
 }

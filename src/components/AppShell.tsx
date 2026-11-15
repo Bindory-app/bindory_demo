@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Home, Search, Layers, User, Moon, Sun } from "lucide-react";
+import { Home, Search, Layers, User, Moon, Sun, Grid2X2 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import faceAsset from "@/assets/mori-face.png.asset.json";
 
@@ -24,16 +24,16 @@ export function ThemeToggle() {
   );
 }
 
-export function AppShell({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+export function AppShell({ title, action, children, greeting, home = false }: { title: string; action?: ReactNode; children: ReactNode; greeting?: string; home?: boolean }) {
   return (
     <div className="min-h-screen overflow-x-hidden bg-canvas-outer">
-      <div className="relative mx-auto flex min-h-screen w-full max-w-[390px] flex-col bg-background shadow-phone">
+      <div className={`relative mx-auto flex min-h-screen w-full max-w-[390px] flex-col shadow-phone ${home ? "bg-card" : "bg-background"}`}>
         <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 pb-3 pt-6">
-          <h1 className="truncate text-2xl font-bold text-foreground">{title}</h1>
+          <div className="min-w-0">{greeting && <p className="mb-1 text-sm font-bold text-primary">{greeting}</p>}<h1 className={`truncate font-bold text-foreground ${home ? "text-3xl" : "text-2xl"}`}>{title}</h1></div>
           {action ?? <ThemeToggle />}
         </header>
         <main className="flex-1 px-5 pb-32">{children}</main>
-        <BottomNav />
+        <BottomNav home={home} />
       </div>
     </div>
   );
@@ -42,7 +42,14 @@ export function AppShell({ title, action, children }: { title: string; action?: 
 const item = "flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-semibold";
 const linkProps = { activeProps: { className: "text-primary" }, inactiveProps: { className: "text-muted-foreground" }, activeOptions: { exact: true } };
 
-export function BottomNav() {
+export function BottomNav({ home = false }: { home?: boolean }) {
+  if (home) return <nav aria-label="Main navigation" className="fixed bottom-0 left-1/2 z-20 flex h-[74px] w-full max-w-[390px] -translate-x-1/2 items-center justify-around border-t border-border bg-card px-3">
+    <Link to="/home" aria-label="Home" className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-banner-foreground"><Home className="size-7" /></Link>
+    <Link to="/search" aria-label="Search" className="grid h-12 w-12 place-items-center text-muted-foreground"><Search className="size-7" /></Link>
+    <Link to="/" aria-label="Ask Mori" className="-mt-9 grid h-[72px] w-[72px] place-items-center rounded-full bg-brand p-1 shadow-orb ring-4 ring-card"><span className="grid h-full w-full place-items-center rounded-full bg-card"><img src={faceAsset.url} alt="" className="h-full w-full object-contain" /></span></Link>
+    <Link to="/collection" aria-label="My Collection" className="grid h-12 w-12 place-items-center text-muted-foreground"><Grid2X2 className="size-7" /></Link>
+    <Link to="/profile" aria-label="My Profile" className="grid h-12 w-12 place-items-center text-muted-foreground"><User className="size-7" /></Link>
+  </nav>;
   return (
     <nav className="fixed bottom-0 left-1/2 z-20 w-full max-w-[390px] -translate-x-1/2 border-t border-border bg-card/95 px-2 pb-3 backdrop-blur">
       <div className="flex items-end">

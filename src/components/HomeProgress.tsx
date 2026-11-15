@@ -1,17 +1,15 @@
-import { ArrowUpRight, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { progressTo } from "@/lib/home-content";
 
-export function HomeProgress({ name, owned, target, images, onClick }: { name: string; owned: number; target: number; images: string[]; onClick: () => void }) {
+export function HomeProgress({ name, owned, target, onClick }: { name: string; owned: number; target: number; onClick: () => void }) {
   const progress = progressTo(owned, target);
   return (
-    <Button variant="outline" onClick={onClick} className="h-auto w-64 shrink-0 snap-start flex-col items-stretch gap-0 whitespace-normal rounded-3xl border-border bg-card p-4 text-left shadow-none">
-      <div className="flex h-24 items-center justify-center gap-2 rounded-2xl bg-accent">
-        {images.length ? images.slice(0, 3).map((image, index) => <img key={`${image}-${index}`} src={image} alt="" className="h-20 w-14 rounded-md object-contain" />) : <Layers className="size-9 text-primary" />}
+    <Button onClick={onClick} className="bg-collection-progress h-[106px] w-[234px] shrink-0 snap-start justify-start gap-3 whitespace-normal rounded-3xl border-0 px-4 text-left text-banner-foreground shadow-none">
+      <div role="progressbar" aria-label={name} aria-valuenow={progress.count} aria-valuemin={0} aria-valuemax={target} className="relative h-[74px] w-[74px] shrink-0">
+        <svg viewBox="0 0 80 80" className="absolute inset-0 size-full! -rotate-90" aria-hidden="true"><circle cx="40" cy="40" r="34" fill="none" stroke="var(--progress-track)" strokeWidth="8" /><circle cx="40" cy="40" r="34" fill="none" stroke="var(--progress-highlight)" strokeWidth="8" pathLength="100" strokeDasharray={`${progress.percent} 100`} /></svg>
+        <span className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-xl font-bold leading-none">{progress.count}</span><span className="mt-0.5 text-[10px]">/{target}</span></span>
       </div>
-      <div className="mt-3 flex items-center justify-between gap-2"><span className="font-bold">{name}</span><ArrowUpRight className="text-primary" /></div>
-      <span className="mt-1 text-xs text-muted-foreground">{progress.remaining ? `${progress.remaining} more to reach ${target}` : `${target} of ${target} collected`}</span>
-      <div role="progressbar" aria-label={name} aria-valuenow={progress.count} aria-valuemin={0} aria-valuemax={target} className="mt-3 h-2 overflow-hidden rounded-full bg-accent"><div className="h-full rounded-full bg-brand" style={{ width: `${progress.percent}%` }} /></div>
+      <span className="min-w-0"><span className="block text-base font-bold leading-tight">{name}</span><span className="mt-1 block text-xs leading-snug">{progress.remaining ? `${progress.remaining} more to reach ${target} cards` : `${target} of ${target} collected`}</span></span>
     </Button>
   );
 }

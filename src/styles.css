@@ -45,6 +45,7 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-banner-foreground: var(--banner-foreground);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -87,6 +88,12 @@
   --primary-foreground: oklch(0.99 0 0);
   --brand-from: oklch(0.52 0.2 284);
   --brand-to: oklch(0.74 0.13 340);
+  --banner-foreground: oklch(0.99 0 0);
+  --collection-from: oklch(0.3 0.12 285);
+  --collection-middle: oklch(0.5 0.2 285);
+  --collection-to: oklch(0.67 0.15 315);
+  --progress-track: oklch(0.56 0.12 290);
+  --progress-highlight: oklch(0.91 0.13 95);
   --showcase-from: oklch(0.55 0.12 190);
   --showcase-to: oklch(0.65 0.13 250);
   --challenge-from: oklch(0.59 0.14 30);
@@ -133,6 +140,7 @@
 }
 
 @utility bg-brand { background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to)); }
+@utility bg-collection-progress { background-image: linear-gradient(120deg, var(--collection-from), var(--collection-middle), var(--collection-to)); }
 @utility bg-showcase { background-image: linear-gradient(135deg, var(--showcase-from), var(--showcase-to)); }
 @utility bg-challenge { background-image: linear-gradient(135deg, var(--challenge-from), var(--challenge-to)); }
 @utility text-brand { background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to)); -webkit-background-clip: text; background-clip: text; color: transparent; }
