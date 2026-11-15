@@ -32,10 +32,12 @@ use the editor.
 - Brand tokens and phone shell live in src/styles.css and src/components/AppShell.tsx; signed-in pages wrap in AppShell; Ask Mori at / renders its own shell and shows the bottom bar only when signed in.
 - Guest actions on / save the request (src/lib/pending-intent.ts) and open AuthSheet; after sign-in the saved request is replayed so the conversation continues.
 - All user tables are owner-only via RLS on user_id = auth.uid(); profiles row is created by a trigger on auth.users.
-- Mori chat runs in TanStack server functions (src/lib/mori.functions.ts) via the Lovable AI Gateway with tool calls, not Supabase Edge Functions; writing tools only create a pending confirm message and data is written by confirmProposal after the user taps Confirm.
+- Mori's server-only agent runs through the Lovable AI Gateway; authenticated RPCs handle history and confirmation, while /api/mori-chat verifies the bearer and streams native events as NDJSON for live chat updates.
 - Points are awarded by database triggers on cards/memories inserts; clients cannot insert points_events.
 - New-user onboarding runs inside the Ask Mori chat (steps in src/lib/onboarding.ts); profiles.onboarded_at decides whether it runs, and the bottom bar stays hidden until it finishes.
 - All card lookups go through src/lib/tcgdex.ts (TCGdex search + detail); images are hotlinked via cardImage() and never stored.
 - Home event destinations have dedicated routes; unavailable public showcase data renders an honest empty state rather than invented collectors.
 - Home progress uses owner-scoped collection and binder membership reads; daily prompt rotation and dismissal keys live in a shared browser-safe helper for deterministic testing.
 - Home uses an opt-in AppShell presentation and an Embla event carousel; other screens keep their existing shell and navigation presentation.
+- Mori confirmation uses a SECURITY INVOKER database function with a locked proposal row and one transaction; binder creation uses owned cards only so suggestions never become invented ownership.
+- Mori UI composes AI Elements conversation, message, tool and composer primitives; assistant borders intentionally match the supplied chat references.

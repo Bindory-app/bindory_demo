@@ -17,6 +17,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as TrendingBindersRouteImport } from './routes/trending-binders'
+import { Route as ApiMoriChatRouteImport } from './routes/api/mori-chat'
 import { Route as EventsAnniversaryRouteImport } from './routes/events.anniversary'
 
 const IndexRoute = IndexRouteImport.update({
@@ -59,6 +60,11 @@ const TrendingBindersRoute = TrendingBindersRouteImport.update({
   path: '/trending-binders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMoriChatRoute = ApiMoriChatRouteImport.update({
+  id: '/api/mori-chat',
+  path: '/api/mori-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventsAnniversaryRoute = EventsAnniversaryRouteImport.update({
   id: '/events/anniversary',
   path: '/events/anniversary',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
+  '/api/mori-chat': typeof ApiMoriChatRoute
   '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
+  '/api/mori-chat': typeof ApiMoriChatRoute
   '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
+  '/api/mori-chat': typeof ApiMoriChatRoute
   '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/studio'
     | '/trending-binders'
+    | '/api/mori-chat'
     | '/events/anniversary'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/studio'
     | '/trending-binders'
+    | '/api/mori-chat'
     | '/events/anniversary'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/studio'
     | '/trending-binders'
+    | '/api/mori-chat'
     | '/events/anniversary'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   StudioRoute: typeof StudioRoute
   TrendingBindersRoute: typeof TrendingBindersRoute
+  ApiMoriChatRoute: typeof ApiMoriChatRoute
   EventsAnniversaryRoute: typeof EventsAnniversaryRoute
 }
 
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrendingBindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/mori-chat': {
+      id: '/api/mori-chat'
+      path: '/api/mori-chat'
+      fullPath: '/api/mori-chat'
+      preLoaderRoute: typeof ApiMoriChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events/anniversary': {
       id: '/events/anniversary'
       path: '/events/anniversary'
@@ -224,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   StudioRoute: StudioRoute,
   TrendingBindersRoute: TrendingBindersRoute,
+  ApiMoriChatRoute: ApiMoriChatRoute,
   EventsAnniversaryRoute: EventsAnniversaryRoute,
 }
 export const routeTree = rootRouteImport

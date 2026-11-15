@@ -292,7 +292,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      confirm_mori_proposal: {
+        Args: { p_action: string; p_card_details?: Json; p_message_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

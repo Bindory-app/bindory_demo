@@ -1,4 +1,12 @@
 # Home update
+## Mori chat
+- [x] Strengthen saved history, tool validation and confirmation safeguards.
+- [x] Stream replies and show tool status while Mori works.
+- [x] Apply supplied chat presentation and formatted replies using AI Elements.
+- [x] Test tool argument rules and unsigned access protection.
+- [ ] Verify signed-in streaming, saving, points and history reload — blocked: no registered account exists.
+
+## Home
 - [x] Replace events and wire their destinations.
 - [x] Add progress cards using actual collection counts.
 - [x] Rotate the daily question; add Tell Mori and Later.
