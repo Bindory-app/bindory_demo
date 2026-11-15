@@ -1,0 +1,1 @@
+alter table public.profiles add column onboarding_answers jsonb, add column onboarded_at timestamptz;

@@ -8,6 +8,13 @@
       "when": 1794720376582,
       "tag": "0000_bindory_core",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794720507501,
+      "tag": "0001_profile_onboarding",
+      "breakpoints": true
     }
   ]
 }

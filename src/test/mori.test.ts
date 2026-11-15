@@ -15,3 +15,16 @@ describe("Guest Mori", () => {
     expect(guestReply("what do I own?")).toContain("I could not find any");
   });
 });
+import { onboardingSteps } from "@/lib/onboarding";
+describe("Onboarding", () => {
+  it("asks exactly three questions in order", () => {
+    expect(onboardingSteps.map((s) => s.question)).toEqual([
+      "First, what brings you to Bindory?",
+      "Which card started it all for you?",
+      "Last one. What do you love collecting most?",
+    ]);
+  });
+  it("echoes the chosen first card", () => {
+    expect(onboardingSteps[1]!.reply("Umbreon VMAX")).toBe("Umbreon VMAX. A lovely place to start. I will remember it.");
+  });
+});

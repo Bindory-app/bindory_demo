@@ -170,6 +170,8 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          onboarded_at: string | null
+          onboarding_answers: Json | null
           updated_at: string
         }
         Insert: {
@@ -177,6 +179,8 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id: string
+          onboarded_at?: string | null
+          onboarding_answers?: Json | null
           updated_at?: string
         }
         Update: {
@@ -184,6 +188,8 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          onboarded_at?: string | null
+          onboarding_answers?: Json | null
           updated_at?: string
         }
         Relationships: []
