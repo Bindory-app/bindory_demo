@@ -165,6 +165,96 @@ export type Database = {
         }
         Relationships: []
       }
+      check_ins: {
+        Row: {
+          created_at: string
+          day: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      follows: {
+        Row: {
+          created_at: string
+          followee_id: string
+          follower_id: string
+        }
+        Insert: {
+          created_at?: string
+          followee_id: string
+          follower_id?: string
+        }
+        Update: {
+          created_at?: string
+          followee_id?: string
+          follower_id?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          body: Json
+          caption: string | null
+          created_at: string
+          id: string
+          is_public: boolean
+          kind: string
+          made_with_mori: boolean
+          media_url: string | null
+          user_id: string
+        }
+        Insert: {
+          body?: Json
+          caption?: string | null
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          kind: string
+          made_with_mori?: boolean
+          media_url?: string | null
+          user_id?: string
+        }
+        Update: {
+          body?: Json
+          caption?: string | null
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          kind?: string
+          made_with_mori?: boolean
+          media_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      saved_binders: {
+        Row: {
+          binder_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          binder_id: string
+          created_at?: string
+          user_id?: string
+        }
+        Update: {
+          binder_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       memories: {
         Row: {
           card_tcgdex_id: string | null
@@ -273,6 +363,13 @@ export type Database = {
           onboarded_at: string | null
           onboarding_answers: Json | null
           updated_at: string
+          bio: string | null
+          collecting_since: number | null
+          is_public: boolean
+          location: string | null
+          mori_outfit: string | null
+          settings: Json
+          username: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -282,6 +379,13 @@ export type Database = {
           onboarded_at?: string | null
           onboarding_answers?: Json | null
           updated_at?: string
+          bio?: string | null
+          collecting_since?: number | null
+          is_public?: boolean
+          location?: string | null
+          mori_outfit?: string | null
+          settings?: Json
+          username?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -291,6 +395,13 @@ export type Database = {
           onboarded_at?: string | null
           onboarding_answers?: Json | null
           updated_at?: string
+          bio?: string | null
+          collecting_since?: number | null
+          is_public?: boolean
+          location?: string | null
+          mori_outfit?: string | null
+          settings?: Json
+          username?: string | null
         }
         Relationships: []
       }
@@ -382,6 +493,9 @@ export type Database = {
       }
     }
     Functions: {
+      binder_is_saveable: { Args: { p_binder: string }; Returns: boolean }
+      delete_my_account: { Args: never; Returns: undefined }
+      load_demo_collection: { Args: { p_profile?: boolean }; Returns: Json }
       confirm_binder_preview: {
         Args: { p_message: string; p_name: string; p_publish?: boolean }
         Returns: Json

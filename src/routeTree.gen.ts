@@ -11,10 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CollectionRouteImport } from './routes/collection'
+import { Route as CreateRouteImport } from './routes/create'
 import { Route as CreateBinderRouteImport } from './routes/create-binder'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as TrendingBindersRouteImport } from './routes/trending-binders'
 import { Route as ApiMoriChatRouteImport } from './routes/api/mori-chat'
@@ -30,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
 const CollectionRoute = CollectionRouteImport.update({
   id: '/collection',
   path: '/collection',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreateRoute = CreateRouteImport.update({
+  id: '/create',
+  path: '/create',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreateBinderRoute = CreateBinderRouteImport.update({
@@ -50,6 +57,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StudioRoute = StudioRouteImport.update({
@@ -86,10 +98,12 @@ const EventsAnniversaryRoute = EventsAnniversaryRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
+  '/create': typeof CreateRoute
   '/create-binder': typeof CreateBinderRoute
   '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
   '/api/mori-chat': typeof ApiMoriChatRoute
@@ -100,10 +114,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
+  '/create': typeof CreateRoute
   '/create-binder': typeof CreateBinderRoute
   '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
   '/api/mori-chat': typeof ApiMoriChatRoute
@@ -115,10 +131,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
+  '/create': typeof CreateRoute
   '/create-binder': typeof CreateBinderRoute
   '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
   '/api/mori-chat': typeof ApiMoriChatRoute
@@ -131,10 +149,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/collection'
+    | '/create'
     | '/create-binder'
     | '/home'
     | '/profile'
     | '/search'
+    | '/settings'
     | '/studio'
     | '/trending-binders'
     | '/api/mori-chat'
@@ -145,10 +165,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/collection'
+    | '/create'
     | '/create-binder'
     | '/home'
     | '/profile'
     | '/search'
+    | '/settings'
     | '/studio'
     | '/trending-binders'
     | '/api/mori-chat'
@@ -159,10 +181,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/collection'
+    | '/create'
     | '/create-binder'
     | '/home'
     | '/profile'
     | '/search'
+    | '/settings'
     | '/studio'
     | '/trending-binders'
     | '/api/mori-chat'
@@ -174,10 +198,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CollectionRoute: typeof CollectionRoute
+  CreateRoute: typeof CreateRoute
   CreateBinderRoute: typeof CreateBinderRoute
   HomeRoute: typeof HomeRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
+  SettingsRoute: typeof SettingsRoute
   StudioRoute: typeof StudioRoute
   TrendingBindersRoute: typeof TrendingBindersRoute
   ApiMoriChatRoute: typeof ApiMoriChatRoute
@@ -200,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/collection'
       fullPath: '/collection'
       preLoaderRoute: typeof CollectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create': {
+      id: '/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof CreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/create-binder': {
@@ -228,6 +261,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/studio': {
@@ -278,10 +318,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CollectionRoute: CollectionRoute,
+  CreateRoute: CreateRoute,
   CreateBinderRoute: CreateBinderRoute,
   HomeRoute: HomeRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
+  SettingsRoute: SettingsRoute,
   StudioRoute: StudioRoute,
   TrendingBindersRoute: TrendingBindersRoute,
   ApiMoriChatRoute: ApiMoriChatRoute,

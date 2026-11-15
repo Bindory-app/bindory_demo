@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { BookHeart, Camera, Layers, Mic, Plus, WandSparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -79,6 +79,7 @@ function GuestAskMori() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const { session, ready } = useSession();
+  const navigate = useNavigate();
   const [sheet, setSheet] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [profileRetry, setProfileRetry] = useState(0);
@@ -450,7 +451,11 @@ function GuestAskMori() {
                 {starters.map(({ label, icon: Icon }) => (
                   <Button
                     key={label}
-                    onClick={() => send(label)}
+                    onClick={() =>
+                      label === "Create something" && session
+                        ? void navigate({ to: "/create" })
+                        : send(label)
+                    }
                     variant="outline"
                     className="h-11 whitespace-normal rounded-full bg-card px-2 text-sm font-bold text-foreground"
                   >

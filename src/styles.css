@@ -160,3 +160,13 @@
     color: var(--color-foreground);
   }
 }
+
+/* Mori-made videos are image sequences: a slow pan per frame, with reduced motion respected. */
+@keyframes mori-pan {
+  from { transform: scale(1.04) translate3d(0, 0, 0); }
+  to { transform: scale(1.14) translate3d(-2%, -2%, 0); }
+}
+@utility animate-mori-pan { animation: mori-pan 3.2s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-mori-pan { animation: none; }
+}

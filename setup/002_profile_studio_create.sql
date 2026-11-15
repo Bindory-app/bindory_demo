@@ -1,0 +1,270 @@
+-- Bindory demo: profile, posts, Mori Studio progress, settings and demo data.
+-- Run once in the Supabase SQL Editor after 001_full_schema.sql.
+
+begin;
+
+-- ===== Profile fields and settings =====
+alter table public.profiles
+  add column username text,
+  add column bio text,
+  add column location text,
+  add column collecting_since int,
+  add column is_public boolean not null default true,
+  add column settings jsonb not null default '{}'::jsonb,
+  add column mori_outfit text;
+alter table public.profiles
+  add constraint profiles_username_format check (username is null or username ~ '^[a-z0-9_.]{3,24}$'),
+  add constraint profiles_bio_length check (bio is null or length(bio) <= 160),
+  add constraint profiles_location_length check (location is null or length(location) <= 60),
+  add constraint profiles_since_range check (collecting_since is null or collecting_since between 1996 and 2100),
+  add constraint profiles_outfit check (mori_outfit is null or mori_outfit in ('studio_scarf','ear_charms','moon_poncho','starlight_cape')),
+  add constraint profiles_avatar_url check (avatar_url is null or avatar_url ~ '^(/demo/|https://)');
+create unique index profiles_username_key on public.profiles (username);
+
+-- ===== Posts (photos, Mori-made videos, story cards, recaps, covers) =====
+create table public.posts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  kind text not null check (kind in ('post','video','story_card','recap','cover')),
+  caption text check (caption is null or length(caption) <= 500),
+  media_url text check (media_url is null or media_url ~ '^(/demo/|https://assets\.tcgdex\.net/)'),
+  body jsonb not null default '{}'::jsonb,
+  made_with_mori boolean not null default false,
+  is_public boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index posts_user_created on public.posts (user_id, created_at desc);
+
+-- ===== Follows (counts only in this demo) =====
+create table public.follows (
+  follower_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  followee_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (follower_id, followee_id),
+  check (follower_id <> followee_id)
+);
+
+-- ===== Saved public binders =====
+create table public.saved_binders (
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  binder_id uuid not null references public.binders(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, binder_id)
+);
+
+-- ===== Daily check-ins for the Mori Studio streak =====
+create table public.check_ins (
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  day date not null default current_date,
+  created_at timestamptz not null default now(),
+  primary key (user_id, day)
+);
+
+do $$
+declare t text;
+begin
+  foreach t in array array['posts','saved_binders','check_ins'] loop
+    execute format('grant select, insert, update, delete on public.%I to authenticated', t);
+    execute format('grant all on public.%I to service_role', t);
+    execute format('alter table public.%I enable row level security', t);
+    execute format('create policy "own select" on public.%I for select to authenticated using (auth.uid() = user_id)', t);
+    execute format('create policy "own insert" on public.%I for insert to authenticated with check (auth.uid() = user_id)', t);
+    execute format('create policy "own update" on public.%I for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id)', t);
+    execute format('create policy "own delete" on public.%I for delete to authenticated using (auth.uid() = user_id)', t);
+  end loop;
+end $$;
+-- A check-in is today only; past days can't be back-filled from the browser.
+drop policy "own insert" on public.check_ins;
+create policy "own insert today" on public.check_ins for insert to authenticated
+  with check (auth.uid() = user_id and day = current_date);
+drop policy "own update" on public.check_ins;
+drop policy "own delete" on public.check_ins;
+
+grant select, insert, delete on public.follows to authenticated;
+grant all on public.follows to service_role;
+alter table public.follows enable row level security;
+create policy "involved select" on public.follows for select to authenticated
+  using (auth.uid() = follower_id or auth.uid() = followee_id);
+create policy "own follow" on public.follows for insert to authenticated with check (auth.uid() = follower_id);
+create policy "own unfollow" on public.follows for delete to authenticated using (auth.uid() = follower_id);
+
+-- Saving another collector's binder only works while that binder is public.
+-- binders RLS hides other people's rows, so the check runs as a definer function that returns only a yes/no.
+create or replace function public.binder_is_saveable(p_binder uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.binders b where b.id = p_binder and (b.is_public or b.user_id = auth.uid()));
+$$;
+revoke all on function public.binder_is_saveable(uuid) from public, anon;
+grant execute on function public.binder_is_saveable(uuid) to authenticated;
+drop policy "own insert" on public.saved_binders;
+create policy "own insert public" on public.saved_binders for insert to authenticated
+  with check (auth.uid() = user_id and public.binder_is_saveable(binder_id));
+
+-- 10 points per daily check-in, recorded by the database like card and memory points.
+create or replace function public.award_check_in_points()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.points_events (user_id, kind, points) values (new.user_id, 'check_in', 10);
+  return new;
+end $$;
+create trigger award_points_check_ins after insert on public.check_ins
+  for each row execute function public.award_check_in_points();
+
+-- ===== Demo collection loader =====
+-- Fills the signed-in account with Wing's sample collection. Runs as the caller (RLS applies),
+-- refuses to run twice, and only overwrites profile fields when p_profile is true.
+create or replace function public.load_demo_collection(p_profile boolean default true)
+returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare
+  uid uuid := auth.uid();
+  moon uuid; j151 uuid; fav uuid;
+  r record; pos int;
+  n_cards int;
+begin
+  if uid is null then raise exception 'Sign in first'; end if;
+  if exists (select 1 from public.profiles where id = uid and settings ? 'demo_loaded') then
+    raise exception 'The demo collection is already loaded';
+  end if;
+
+  insert into public.cards (user_id, tcgdex_id, name, set_name, set_id, number, illustrator, rarity, year, image_url, created_at)
+  select uid, v.*, now() - (row_number() over () * interval '3 days')
+  from (values
+    ('swsh7-215','Umbreon VMAX','Evolving Skies','swsh7','215','KEIICHIRO ITO','Secret Rare',2021,'https://assets.tcgdex.net/en/swsh/swsh7/215/high.webp'),
+    ('swsh7-65','Espeon VMAX','Evolving Skies','swsh7','65','5ban Graphics','Holo Rare VMAX',2021,'https://assets.tcgdex.net/en/swsh/swsh7/65/high.webp'),
+    ('swsh12.5-062','Lunatone','Crown Zenith','swsh12.5','062','Narumi Sato','Uncommon',2023,'https://assets.tcgdex.net/en/swsh/swsh12.5/062/high.webp'),
+    ('swsh6-64','Cresselia','Chilling Reign','swsh6','64','Tika Matsuno','Holo Rare',2021,'https://assets.tcgdex.net/en/swsh/swsh6/64/high.webp'),
+    ('swsh8-157','Gengar VMAX','Fusion Strike','swsh8','157','5ban Graphics','Holo Rare VMAX',2021,'https://assets.tcgdex.net/en/swsh/swsh8/157/high.webp'),
+    ('swsh8-271','Gengar VMAX','Fusion Strike','swsh8','271','sowsow','Secret Rare',2021,'https://assets.tcgdex.net/en/swsh/swsh8/271/high.webp'),
+    ('swsh12-186','Lugia V','Silver Tempest','swsh12','186','kawayoo','Ultra Rare',2022,'https://assets.tcgdex.net/en/swsh/swsh12/186/high.webp'),
+    ('sv08.5-161','Umbreon ex','Prismatic Evolutions','sv08.5','161','YASHIRO Nanaco','Special illustration rare',2025,'https://assets.tcgdex.net/en/sv/sv08.5/161/high.webp'),
+    ('swsh7-74','Sylveon V','Evolving Skies','swsh7','74','aky CG Works','Holo Rare V',2021,'https://assets.tcgdex.net/en/swsh/swsh7/74/high.webp'),
+    ('swsh7-175','Glaceon V','Evolving Skies','swsh7','175','Narumi Sato','Ultra Rare',2021,'https://assets.tcgdex.net/en/swsh/swsh7/175/high.webp'),
+    ('swsh7-167','Leafeon V','Evolving Skies','swsh7','167','You Iribi','Ultra Rare',2021,'https://assets.tcgdex.net/en/swsh/swsh7/167/high.webp'),
+    ('swsh7-18','Flareon VMAX','Evolving Skies','swsh7','18','5ban Graphics','Holo Rare VMAX',2021,'https://assets.tcgdex.net/en/swsh/swsh7/18/high.webp'),
+    ('swsh7-30','Vaporeon VMAX','Evolving Skies','swsh7','30','5ban Graphics','Holo Rare VMAX',2021,'https://assets.tcgdex.net/en/swsh/swsh7/30/high.webp'),
+    ('sv03.5-151','Mew ex','151','sv03.5','151','aky CG Works','Double rare',2023,'https://assets.tcgdex.net/en/sv/sv03.5/151/high.webp'),
+    ('sv03.5-006','Charizard ex','151','sv03.5','006','PLANETA Mochizuki','Double rare',2023,'https://assets.tcgdex.net/en/sv/sv03.5/006/high.webp'),
+    ('sv03.5-001','Bulbasaur','151','sv03.5','001','Yuu Nishida','Common',2023,'https://assets.tcgdex.net/en/sv/sv03.5/001/high.webp'),
+    ('swsh9-018','Charizard VSTAR','Brilliant Stars','swsh9','018','5ban Graphics','Holo Rare VSTAR',2022,'https://assets.tcgdex.net/en/swsh/swsh9/018/high.webp'),
+    ('swsh12-138','Lugia V','Silver Tempest','swsh12','138','Mitsuhiro Arita','Holo Rare V',2022,'https://assets.tcgdex.net/en/swsh/swsh12/138/high.webp'),
+    ('sv06.5-071','Cresselia','Shrouded Fable','sv06.5','071','satoma','Illustration rare',2024,'https://assets.tcgdex.net/en/sv/sv06.5/071/high.webp'),
+    ('hgss2-5','Mismagius','Unleashed','hgss2','5','Hideaki Hakozaki','Holo Rare',2010,'https://assets.tcgdex.net/en/hgss/hgss2/5/high.webp'),
+    ('swsh3.5-38','Absol','Champion''s Path','swsh3.5','38','kodama','Uncommon',2020,'https://assets.tcgdex.net/en/swsh/swsh3.5/38/high.webp'),
+    ('swsh7-212','Sylveon VMAX','Evolving Skies','swsh7','212','Taira Akitsu','Secret Rare',2021,'https://assets.tcgdex.net/en/swsh/swsh7/212/high.webp')
+  ) as v(tcgdex_id, name, set_name, set_id, number, illustrator, rarity, year, image_url)
+  where not exists (select 1 from public.cards c where c.user_id = uid and c.tcgdex_id = v.tcgdex_id);
+  get diagnostics n_cards = row_count;
+
+  insert into public.binders (user_id, name, description, is_public)
+    values (uid, 'Moonlight Pokémon', 'Night sky artwork, Psychic and Darkness types, and the league night trade.', true)
+    returning id into moon;
+  insert into public.binders (user_id, name, description, is_public)
+    values (uid, '151 Journey', 'Working through the original 151, one page at a time.', true)
+    returning id into j151;
+  insert into public.binders (user_id, name, description, is_public)
+    values (uid, 'Favourite artworks', 'Illustrations I still stop and stare at.', false)
+    returning id into fav;
+
+  pos := 0;
+  for r in select c.id, c.tcgdex_id from public.cards c
+           where c.user_id = uid and c.tcgdex_id in ('swsh7-215','sv08.5-161','swsh8-271','swsh12.5-062','swsh6-64','sv06.5-071','hgss2-5','swsh3.5-38','swsh12-186')
+           order by array_position(array['swsh7-215','sv08.5-161','swsh8-271','swsh12.5-062','swsh6-64','sv06.5-071','hgss2-5','swsh3.5-38','swsh12-186'], c.tcgdex_id) loop
+    insert into public.binder_cards (user_id, binder_id, card_id, position, reason)
+    values (uid, moon, r.id, pos, case r.tcgdex_id
+      when 'swsh7-215' then 'The league night trade, under a full moon.'
+      when 'sv08.5-161' then 'Its night palette suits this binder.'
+      when 'swsh8-271' then 'Shadows and a moonlit sky.'
+      when 'swsh12.5-062' then 'Lunatone is the moon itself.'
+      when 'swsh6-64' then 'Cresselia, the lunar Pokémon.'
+      when 'sv06.5-071' then 'A dreamy night sky illustration.'
+      when 'hgss2-5' then 'A Ghost type that comes out at night.'
+      when 'swsh3.5-38' then 'Darkness type, dusk-coloured art.'
+      else 'Silver light over night water.' end);
+    if pos = 0 then update public.binders set cover_card_id = r.id where id = moon; end if;
+    pos := pos + 1;
+  end loop;
+
+  pos := 0;
+  for r in select c.id, c.tcgdex_id from public.cards c
+           where c.user_id = uid and c.set_id = 'sv03.5' order by c.number loop
+    insert into public.binder_cards (user_id, binder_id, card_id, position, reason)
+    values (uid, j151, r.id, pos, 'Part of the original 151.');
+    if pos = 0 then update public.binders set cover_card_id = r.id where id = j151; end if;
+    pos := pos + 1;
+  end loop;
+
+  pos := 0;
+  for r in select c.id, c.tcgdex_id from public.cards c
+           where c.user_id = uid and c.tcgdex_id in ('swsh7-74','sv03.5-151','swsh7-175','swsh7-167','swsh7-212','swsh12-138') loop
+    insert into public.binder_cards (user_id, binder_id, card_id, position, reason)
+    values (uid, fav, r.id, pos, 'An illustration worth a page of its own.');
+    if pos = 0 then update public.binders set cover_card_id = r.id where id = fav; end if;
+    pos := pos + 1;
+  end loop;
+
+  insert into public.memories (user_id, title, note, happened_on, place, with_whom, card_tcgdex_id, is_private) values
+    (uid, 'League night trade', 'Traded my Pikachu Celebrations card for the Umbreon VMAX alt art. Best trade of the year.', current_date - 40, 'League night', 'Mina', 'swsh7-215', true),
+    (uid, 'First convention find', 'Found the Lugia V alt art at my first card show. The card that anchors my collection.', current_date - 400, 'Card convention', null, 'swsh12-186', false),
+    (uid, 'Started the 151 binder', 'Opened a 151 booster box with friends and decided to finish the set.', current_date - 300, 'Home', 'Friends', 'sv03.5-151', false),
+    (uid, 'A gift from a friend', 'Mina gave me Sylveon V for my birthday.', current_date - 200, null, 'Mina', 'swsh7-74', true),
+    (uid, 'Childhood pack opening', 'Where it all started.', make_date(2010, 6, 1), 'Home', 'My brother', 'hgss2-5', true);
+
+  insert into public.wishlist (user_id, tcgdex_id, name, image_url, note) values
+    (uid, 'swsh8-270', 'Espeon VMAX', 'https://assets.tcgdex.net/en/swsh/swsh8/270/high.webp', 'Completes the Eeveelution alt arts.'),
+    (uid, 'swsh7-95', 'Umbreon VMAX', 'https://assets.tcgdex.net/en/swsh/swsh7/95/high.webp', 'The regular art, to sit beside the alt art.')
+  on conflict do nothing;
+
+  insert into public.posts (user_id, kind, caption, media_url, body, made_with_mori, is_public, created_at) values
+    (uid, 'post', 'Moonlit pages.', '/demo/cover-moonmoments.jpg', '{}', false, true, now() - interval '2 days'),
+    (uid, 'post', 'The league night trade.', 'https://assets.tcgdex.net/en/swsh/swsh7/215/high.webp', '{}', false, true, now() - interval '5 days'),
+    (uid, 'post', 'Starting the 151 binder.', 'https://assets.tcgdex.net/en/sv/sv03.5/006/high.webp', '{}', false, true, now() - interval '9 days'),
+    (uid, 'post', 'Night gallery.', '/demo/cover-nightgallery.jpg', '{}', false, true, now() - interval '12 days'),
+    (uid, 'post', 'Pastel page flip.', 'https://assets.tcgdex.net/en/swsh/swsh7/74/high.webp', '{}', false, true, now() - interval '15 days'),
+    (uid, 'post', 'Soft palettes for the pastel pages.', '/demo/cover-softstudio.jpg', '{}', false, true, now() - interval '20 days'),
+    (uid, 'video', 'The trade at league night', null,
+      '{"style":"Celestial","frames":[{"image":"https://assets.tcgdex.net/en/swsh/swsh7/215/high.webp","text":"League night"},{"image":"/demo/cover-moonlight.jpg","text":"One trade"},{"image":"https://assets.tcgdex.net/en/sv/sv08.5/161/high.webp","text":"A moonlit binder"}]}',
+      true, true, now() - interval '3 days'),
+    (uid, 'video', 'Moon Moments, page by page.', null,
+      '{"style":"Dreamy","frames":[{"image":"/demo/cover-celestial.jpg","text":"Moon Moments"},{"image":"https://assets.tcgdex.net/en/swsh/swsh12.5/062/high.webp","text":"Lunatone"},{"image":"https://assets.tcgdex.net/en/swsh/swsh6/64/high.webp","text":"Cresselia"}]}',
+      true, true, now() - interval '8 days');
+
+  insert into public.check_ins (user_id, day)
+  select uid, current_date where not exists (select 1 from public.check_ins where user_id = uid and day = current_date);
+
+  if p_profile then
+    update public.profiles set
+      display_name = 'Wing Wu',
+      username = coalesce(username, 'wingcollects'),
+      bio = 'Cards, memories and moonlit finds.',
+      location = 'Melbourne',
+      collecting_since = 2023,
+      avatar_url = coalesce(avatar_url, '/demo/av1.png'),
+      mori_outfit = 'starlight_cape'
+    where id = uid;
+  end if;
+  update public.profiles set settings = settings || jsonb_build_object('demo_loaded', now()) where id = uid;
+
+  return jsonb_build_object('cards', n_cards, 'binders', 3, 'memories', 5, 'posts', 8);
+end $$;
+revoke all on function public.load_demo_collection(boolean) from public, anon;
+grant execute on function public.load_demo_collection(boolean) to authenticated;
+
+-- ===== Delete my account =====
+-- Deletes the caller's Bindory rows, then their sign-in account (profile, posts and check-ins cascade).
+create or replace function public.delete_my_account()
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.uid() is null then raise exception 'Sign in first'; end if;
+  delete from public.mori_messages where user_id = auth.uid();
+  delete from public.binder_cards where user_id = auth.uid();
+  delete from public.binders where user_id = auth.uid();
+  delete from public.memories where user_id = auth.uid();
+  delete from public.wishlist where user_id = auth.uid();
+  delete from public.points_events where user_id = auth.uid();
+  delete from public.cards where user_id = auth.uid();
+  delete from auth.users where id = auth.uid();
+end $$;
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;
+
+commit;
