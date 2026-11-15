@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Home, Search, User, Moon, Sun, Grid2X2 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import faceAsset from "@/assets/mori-face.png.asset.json";
 
 export function useTheme() {
   const [dark, setDark] = useState(false);
@@ -99,7 +98,7 @@ export function BottomNav(_props: { home?: boolean } = {}) {
         className="-mt-9 grid h-[72px] w-[72px] place-items-center rounded-full bg-brand p-1 shadow-orb ring-4 ring-card"
       >
         <span className="grid h-full w-full place-items-center rounded-full bg-card">
-          <img src={faceAsset.url} alt="" className="h-full w-full object-contain" />
+          <img src="/mori-face.png" alt="" className="h-full w-full object-contain" />
         </span>
       </Link>
       <Link

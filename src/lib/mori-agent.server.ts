@@ -5,7 +5,7 @@ import {
   type ResponsesInputItem,
   type ResponsesRequest,
   type ResponsesResponse,
-} from "@lovable.dev/ai-gateway";
+} from "./ai-gateway.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { cardImage, cardsByIllustrator, getCard, getSet, searchCards } from "./tcgdex";
@@ -20,7 +20,8 @@ import {
 } from "./mori-tools";
 
 type DB = SupabaseClient<Database>;
-const MODEL = "openai/gpt-6-astra" as const;
+// Any tool-capable model ID from https://ai-gateway.vercel.sh/v1/models; override with AI_GATEWAY_MODEL.
+const MODEL = process.env["AI_GATEWAY_MODEL"] || "anthropic/claude-haiku-5.5";
 
 const SYSTEM = `You are Mori, a warm, concise Pokémon TCG collector agent inside the Bindory app. Keep replies short (1-3 sentences), friendly, US English, sentence case.
 You can only act through your tools: search_catalogue, add_card_to_collection, suggest_binder_for_card, create_binder, save_memory, add_to_wishlist, find_related_cards, list_my_cards, find_collectors.
@@ -340,7 +341,8 @@ export async function runMori(
       );
       let res: ResponsesResponse | undefined;
       for await (const event of stream) {
-        if (event.type === "response.output_text.delta") emit({ type: "text", text: event.delta });
+        if (event.type === "response.output_text.delta")
+          emit({ type: "text", text: event.delta ?? "" });
         if (event.type === "response.completed") res = event.response;
         if (event.type === "response.incomplete") throw new Error("Mori response incomplete");
       }

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
-import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { Mori } from "./Mori";
 import { Button } from "@/components/ui/button";
@@ -55,11 +54,12 @@ export function AuthSheet({
 
   const google = async () => {
     setError("");
-    const r = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+    // Supabase redirects to Google and back; the session is picked up on return.
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
     });
-    if (r.error) setError("Google sign-in didn't work. Please try again.");
-    else if (!r.redirected) onOpenChange(false);
+    if (error) setError("Google sign-in didn't work. Please try again.");
   };
 
   const magic = async (e: React.FormEvent) => {
