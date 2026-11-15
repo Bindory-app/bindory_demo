@@ -11,10 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CollectionRouteImport } from './routes/collection'
+import { Route as CreateBinderRouteImport } from './routes/create-binder'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as TrendingBindersRouteImport } from './routes/trending-binders'
+import { Route as EventsAnniversaryRouteImport } from './routes/events.anniversary'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -24,6 +27,11 @@ const IndexRoute = IndexRouteImport.update({
 const CollectionRoute = CollectionRouteImport.update({
   id: '/collection',
   path: '/collection',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreateBinderRoute = CreateBinderRouteImport.update({
+  id: '/create-binder',
+  path: '/create-binder',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HomeRoute = HomeRouteImport.update({
@@ -46,54 +54,97 @@ const StudioRoute = StudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrendingBindersRoute = TrendingBindersRouteImport.update({
+  id: '/trending-binders',
+  path: '/trending-binders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsAnniversaryRoute = EventsAnniversaryRouteImport.update({
+  id: '/events/anniversary',
+  path: '/events/anniversary',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
+  '/create-binder': typeof CreateBinderRoute
   '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/studio': typeof StudioRoute
+  '/trending-binders': typeof TrendingBindersRoute
+  '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
+  '/create-binder': typeof CreateBinderRoute
   '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/studio': typeof StudioRoute
+  '/trending-binders': typeof TrendingBindersRoute
+  '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
+  '/create-binder': typeof CreateBinderRoute
   '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/studio': typeof StudioRoute
+  '/trending-binders': typeof TrendingBindersRoute
+  '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/collection' | '/home' | '/profile' | '/search' | '/studio'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/collection' | '/home' | '/profile' | '/search' | '/studio'
-  id:
-    | '__root__'
+  fullPaths:
     | '/'
     | '/collection'
+    | '/create-binder'
     | '/home'
     | '/profile'
     | '/search'
     | '/studio'
+    | '/trending-binders'
+    | '/events/anniversary'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/collection'
+    | '/create-binder'
+    | '/home'
+    | '/profile'
+    | '/search'
+    | '/studio'
+    | '/trending-binders'
+    | '/events/anniversary'
+  id:
+    | '__root__'
+    | '/'
+    | '/collection'
+    | '/create-binder'
+    | '/home'
+    | '/profile'
+    | '/search'
+    | '/studio'
+    | '/trending-binders'
+    | '/events/anniversary'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CollectionRoute: typeof CollectionRoute
+  CreateBinderRoute: typeof CreateBinderRoute
   HomeRoute: typeof HomeRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
   StudioRoute: typeof StudioRoute
+  TrendingBindersRoute: typeof TrendingBindersRoute
+  EventsAnniversaryRoute: typeof EventsAnniversaryRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -110,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/collection'
       fullPath: '/collection'
       preLoaderRoute: typeof CollectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create-binder': {
+      id: '/create-binder'
+      path: '/create-binder'
+      fullPath: '/create-binder'
+      preLoaderRoute: typeof CreateBinderRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/home': {
@@ -140,16 +198,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trending-binders': {
+      id: '/trending-binders'
+      path: '/trending-binders'
+      fullPath: '/trending-binders'
+      preLoaderRoute: typeof TrendingBindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events/anniversary': {
+      id: '/events/anniversary'
+      path: '/events/anniversary'
+      fullPath: '/events/anniversary'
+      preLoaderRoute: typeof EventsAnniversaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CollectionRoute: CollectionRoute,
+  CreateBinderRoute: CreateBinderRoute,
   HomeRoute: HomeRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
   StudioRoute: StudioRoute,
+  TrendingBindersRoute: TrendingBindersRoute,
+  EventsAnniversaryRoute: EventsAnniversaryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

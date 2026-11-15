@@ -11,6 +11,8 @@ export const Route = createFileRoute("/search")({
       { name: "description", content: "Search every Pokémon TCG card by name." },
       { property: "og:title", content: "Search · Bindory" },
       { property: "og:description", content: "Search every Pokémon TCG card by name." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: SearchPage,

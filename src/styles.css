@@ -87,6 +87,10 @@
   --primary-foreground: oklch(0.99 0 0);
   --brand-from: oklch(0.52 0.2 284);
   --brand-to: oklch(0.74 0.13 340);
+  --showcase-from: oklch(0.55 0.12 190);
+  --showcase-to: oklch(0.65 0.13 250);
+  --challenge-from: oklch(0.59 0.14 30);
+  --challenge-to: oklch(0.66 0.14 350);
   --secondary: oklch(0.95 0.025 290);
   --secondary-foreground: oklch(0.25 0.05 270);
   --muted: oklch(0.95 0.02 290);
@@ -129,6 +133,8 @@
 }
 
 @utility bg-brand { background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to)); }
+@utility bg-showcase { background-image: linear-gradient(135deg, var(--showcase-from), var(--showcase-to)); }
+@utility bg-challenge { background-image: linear-gradient(135deg, var(--challenge-from), var(--challenge-to)); }
 @utility text-brand { background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 @utility shadow-orb { box-shadow: var(--shadow-orb); }
 @utility shadow-phone { box-shadow: var(--shadow-phone); }

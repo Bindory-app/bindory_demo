@@ -36,3 +36,5 @@ use the editor.
 - Points are awarded by database triggers on cards/memories inserts; clients cannot insert points_events.
 - New-user onboarding runs inside the Ask Mori chat (steps in src/lib/onboarding.ts); profiles.onboarded_at decides whether it runs, and the bottom bar stays hidden until it finishes.
 - All card lookups go through src/lib/tcgdex.ts (TCGdex search + detail); images are hotlinked via cardImage() and never stored.
+- Home event destinations have dedicated routes; unavailable public showcase data renders an honest empty state rather than invented collectors.
+- Home progress uses owner-scoped collection and binder membership reads; daily prompt rotation and dismissal keys live in a shared browser-safe helper for deterministic testing.

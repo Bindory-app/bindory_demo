@@ -20,6 +20,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Meet Mori, your Bindory agent for Pokémon TCG collecting." },
       { property: "og:title", content: "Ask Mori · Bindory" },
       { property: "og:description", content: "Meet Mori, your Bindory agent for Pokémon TCG collecting." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: GuestAskMori,

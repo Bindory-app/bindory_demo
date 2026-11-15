@@ -10,6 +10,8 @@ export const Route = createFileRoute("/collection")({
       { name: "description", content: "Browse your Pokémon TCG binder in Bindory." },
       { property: "og:title", content: "My collection · Bindory" },
       { property: "og:description", content: "Browse your Pokémon TCG binder." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Collection,

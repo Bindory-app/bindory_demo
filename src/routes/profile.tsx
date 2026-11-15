@@ -12,6 +12,8 @@ export const Route = createFileRoute("/profile")({
       { name: "description", content: "Your Bindory profile, privacy and settings." },
       { property: "og:title", content: "My profile · Bindory" },
       { property: "og:description", content: "Your Bindory profile, privacy and settings." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Profile,
