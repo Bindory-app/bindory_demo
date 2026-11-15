@@ -43,6 +43,13 @@
       "when": 1794725554075,
       "tag": "0005_enforce_private_memory_photo_folders",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794725852775,
+      "tag": "0006_collection_grail_selection",
+      "breakpoints": true
     }
   ]
 }

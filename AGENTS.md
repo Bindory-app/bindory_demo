@@ -42,6 +42,7 @@ use the editor.
 - Mori confirmation uses a SECURITY INVOKER database function with a locked proposal row and one transaction; binder creation uses owned cards only so suggestions never become invented ownership.
 - Mori UI composes AI Elements conversation, message, tool and composer primitives; assistant borders intentionally match the supplied chat references.
 - Collection tabs read only owner-scoped live rows; shared browser-safe helpers govern card pagination and session notices, while collection changes go through Mori confirmation.
-- Grail slots must remain empty until explicit grail selections and real slab-photo data exist; ordinary card images must not be presented as slab photos.
+- Grail selections use owner-scoped cards with an invoker user_cards view and transactional rank RPC; only private uploaded slab photos render in grail slots, never ordinary card imagery.
+- AppShell owns one icon-only active-aware bottom navigation shared across screens; collection presentation opts into a card surface and kicker.
 - Mori initialization keys on user identity rather than session tokens; profile failures are retryable and onboarding saves upsert the owned profile before entering chat.
 - Photo ownership is validated at the chat boundary and memory proposal, with private storage policies restricting every operation to the owner's first path segment.

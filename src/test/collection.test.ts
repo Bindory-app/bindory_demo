@@ -1,7 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { claimCollectionNotice, collectionPage } from "@/lib/collection";
+import { assignGrail, claimCollectionNotice, collectionPage } from "@/lib/collection";
 
 describe("Collection cards", () => {
+  it("allows only three grail ranks", () => {
+    const rows = [{ id: "owned", is_grail: false, grail_rank: null }];
+    for (const rank of [1, 2, 3])
+      expect(assignGrail(rows, "owned", rank)[0]?.grail_rank).toBe(rank);
+    expect(() => assignGrail(rows, "owned", 4)).toThrow();
+  });
+  it("replaces a rank rather than duplicating it and rejects unowned cards", () => {
+    const rows = [
+      { id: "old", is_grail: true, grail_rank: 1 },
+      { id: "new", is_grail: false, grail_rank: null },
+    ];
+    expect(assignGrail(rows, "new", 1)).toEqual([
+      { id: "old", is_grail: false, grail_rank: null },
+      { id: "new", is_grail: true, grail_rank: 1 },
+    ]);
+    expect(() => assignGrail(rows, "unowned", 1)).toThrow();
+  });
   const cards = Array.from({ length: 25 }, (_, i) => ({
     name: `Card ${i + 1}`,
     set_name: i === 0 ? "151" : "Base Set",

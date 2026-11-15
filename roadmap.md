@@ -1,10 +1,13 @@
 # Home update
 ## My Collection
+- [x] Match supplied collection layout and unify icon-only active navigation across screens.
+- [x] Persist three owner-selected grail ranks, add menus/picker and private slab-photo uploads.
+- [x] Verify grail selection persists after reload, rank replacement, four-column grid and active navigation on phone/desktop; eight collection tests pass.
 - [x] Replace sample cards with owned Cards, Binders, Memories and Wish list tabs.
 - [x] Add 12-card pagination, name/set/artist search, Mori shortcuts and a session-only noticed prompt.
 - [x] Show binder covers and private memory/story views; keep grails empty until real slab photos are supplied.
 - [x] Verify signed-in cards, tab actions, notice dismissal and Add-to-Mori replay on phone and desktop; pagination/search rules passed tests.
-- [ ] Match collection screenshots and populate grail slab photos — waiting for collection screenshots and actual grail photos/selections.
+- [ ] Populate grail slab photos — users can now select grails and upload their actual slab photos; screenshots are references, not collection assets.
 ## Mori chat
 - [x] Fix identity-only initialization, profile retry/upsert, touch focus, auth modes, duplicate messages and onboarding search guards.
 - [x] Validate photo ownership at the chat boundary and memory tool; enforce private owner-folder storage policies.

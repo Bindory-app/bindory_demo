@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { BookHeart, ChevronLeft, ChevronRight, Image, Layers, Plus, Search, X } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { AppShell } from "@/components/AppShell";
+import { Grails, GrailCardMenu } from "@/components/GrailCards";
 import { Mori } from "@/components/Mori";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { savePendingIntent } from "@/lib/pending-intent";
-import { claimCollectionNotice, collectionPage, MOON_REQUEST } from "@/lib/collection";
+import { assignGrail, claimCollectionNotice, collectionPage, MOON_REQUEST } from "@/lib/collection";
 
 type Card = Tables<"cards">;
 type Binder = Tables<"binders">;
@@ -70,6 +71,9 @@ function Collection() {
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [savingGrail, setSavingGrail] = useState(false);
+  const [grailError, setGrailError] = useState("");
+  const [revision, setRevision] = useState(0);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [notice, setNotice] = useState(false);
@@ -132,9 +136,10 @@ function Collection() {
       setWishes(w.data ?? []);
       setMemberships(links.data ?? []);
       setLoading(false);
-      const paths = (m.data ?? [])
-        .map((row) => row.photo_path)
-        .filter((path): path is string => Boolean(path));
+      const paths = [
+        ...(m.data ?? []).map((row) => row.photo_path),
+        ...(c.data ?? []).map((row) => row.slab_photo_path),
+      ].filter((path): path is string => Boolean(path));
       if (paths.length) {
         const { data } = await supabase.storage.from("memory-photos").createSignedUrls(paths, 3600);
         if (active)
@@ -150,7 +155,7 @@ function Collection() {
     return () => {
       active = false;
     };
-  }, [ready, session?.user.id]);
+  }, [ready, session?.user.id, revision]);
 
   useEffect(() => {
     if (!ready || loading || error) return;
@@ -164,6 +169,38 @@ function Collection() {
     return () => clearTimeout(timer);
   }, [ready, loading, error, session?.user.id]);
 
+  const chooseGrail = async (card: Card, rank: number) => {
+    if (!session || savingGrail) return;
+    setSavingGrail(true);
+    setGrailError("");
+    const { error } = await supabase.rpc("set_card_grail", {
+      p_card_id: card.id,
+      p_rank: rank,
+    });
+    if (error) setGrailError("I could not save your grail. Please try again.");
+    else setCards((previous) => assignGrail(previous, card.id, rank));
+    setSavingGrail(false);
+  };
+  const uploadSlab = async (card: Card, file: File) => {
+    if (!session || savingGrail) return;
+    setSavingGrail(true);
+    setGrailError("");
+    const path = `${session.user.id}/slabs/${crypto.randomUUID()}`;
+    const bucket = supabase.storage.from("memory-photos");
+    const { error: uploadError } = await bucket.upload(path, file, { contentType: file.type });
+    const { error } = uploadError
+      ? { error: uploadError }
+      : await supabase
+          .from("cards")
+          .update({ slab_photo_path: path })
+          .eq("id", card.id)
+          .eq("user_id", session.user.id);
+    if (error) {
+      if (!uploadError) await bucket.remove([path]);
+      setGrailError("I could not save your slab photo. Please try again.");
+    } else setRevision((value) => value + 1);
+    setSavingGrail(false);
+  };
   const results = collectionPage(cards, query, page);
   const binderCards = (binder: Binder) =>
     memberships
@@ -215,6 +252,8 @@ function Collection() {
   return (
     <AppShell
       title="My Collection"
+      collection
+      kicker="Everything you keep"
       action={
         <Button
           size="icon"
@@ -228,17 +267,19 @@ function Collection() {
       }
     >
       <Tabs defaultValue="cards" className="mt-2">
-        <TabsList className="grid h-11 w-full grid-cols-4 rounded-full bg-secondary p-1">
-          {([
-            ["cards", "Cards"],
-            ["binders", "Binders"],
-            ["memories", "Memories"],
-            ["wishlist", "Wish list"],
-          ] as const).map(([value, label]) => (
+        <TabsList className="flex h-auto w-full justify-between gap-1.5 bg-transparent p-0">
+          {(
+            [
+              ["cards", "Cards"],
+              ["binders", "Binders"],
+              ["memories", "Memories"],
+              ["wishlist", "Wish list"],
+            ] as const
+          ).map(([value, label]) => (
             <TabsTrigger
               key={value}
               value={value}
-              className="rounded-full px-1 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-banner-foreground data-[state=active]:shadow-none"
+              className="rounded-full border border-border bg-card px-3 py-2 text-xs font-bold data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-banner-foreground data-[state=active]:shadow-none"
             >
               {label}
             </TabsTrigger>
@@ -255,28 +296,25 @@ function Collection() {
         ) : (
           <>
             <TabsContent value="cards" className="mt-6">
-              <h2 className="text-lg font-bold">My Grails</h2>
-              <div
-                className="mt-3 grid h-[30svh] min-h-40 max-h-72 grid-cols-3 gap-2"
-                aria-label="Top 3 grail photos"
-              >
-                {[1, 2, 3].map((rank) => (
-                  <div
-                    key={rank}
-                    className="flex min-w-0 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-secondary/40 text-muted-foreground"
-                  >
-                    <Image className="size-6" />
-                    <span className="text-xs font-semibold">Grail {rank}</span>
-                  </div>
-                ))}
-              </div>
+              <Grails
+                cards={cards}
+                photos={photos}
+                choose={(card, rank) => void chooseGrail(card, rank)}
+                upload={(card, file) => void uploadSlab(card, file)}
+                saving={savingGrail}
+              />
+              {grailError && (
+                <p role="alert" className="mt-2 text-sm text-destructive">
+                  {grailError}
+                </p>
+              )}
               <div className="mb-3 mt-6 flex items-center justify-between gap-3">
                 <h2 className="shrink-0 text-lg font-bold">All cards</h2>
                 <label className="flex h-9 min-w-0 max-w-48 items-center gap-1.5 rounded-full border border-border px-2.5">
                   <Search className="size-3.5 shrink-0 text-muted-foreground" />
                   <Input
                     aria-label="Search collection by name, set or artist"
-                    placeholder="Name, set or artist"
+                    placeholder="Search cards"
                     value={query}
                     onChange={(e) => {
                       setQuery(e.target.value);
@@ -286,24 +324,28 @@ function Collection() {
                   />
                 </label>
               </div>
-              <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+              <div className="grid grid-cols-4 gap-x-2 gap-y-3">
                 {results.cards.map((card) => (
-                  <Button
-                    key={card.id}
-                    variant="ghost"
-                    onClick={() => setDetail(card)}
-                    className="h-auto min-w-0 flex-col justify-start gap-1 whitespace-normal p-0 text-left hover:bg-transparent"
-                  >
-                    <CardPhoto
-                      src={card.image_url}
-                      name={card.name}
-                      className="aspect-[63/88] rounded-lg"
+                  <div key={card.id} className="relative min-w-0">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setDetail(card)}
+                      className="h-auto min-w-0 w-full flex-col justify-start gap-1 whitespace-normal p-0 text-center hover:bg-transparent"
+                    >
+                      <CardPhoto
+                        src={card.image_url}
+                        name={card.name}
+                        className="aspect-[63/88] rounded-[6px]"
+                      />
+                      <span className="block w-full text-[10px] font-medium leading-tight">
+                        {card.name}
+                      </span>
+                    </Button>
+                    <GrailCardMenu
+                      card={card}
+                      choose={(card, rank) => void chooseGrail(card, rank)}
                     />
-                    <span className="block w-full truncate text-xs font-bold">{card.name}</span>
-                    <span className="block w-full truncate text-[10px] font-normal text-muted-foreground">
-                      {card.set_name}
-                    </span>
-                  </Button>
+                  </div>
                 ))}
               </div>
               {!results.total && (
@@ -335,7 +377,7 @@ function Collection() {
                       variant={results.page === i + 1 ? "default" : "ghost"}
                       size="icon"
                       onClick={() => setPage(i + 1)}
-                      className="rounded-full"
+                      className="rounded-xl border border-border"
                     >
                       {i + 1}
                     </Button>
@@ -351,6 +393,9 @@ function Collection() {
                   </Button>
                 </nav>
               )}
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                {results.total} cards
+              </p>
             </TabsContent>
             <TabsContent value="binders" className="mt-5">
               <div className="grid grid-cols-2 gap-3">

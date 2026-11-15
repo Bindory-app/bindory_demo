@@ -57,6 +57,13 @@ export type Database = {
             referencedRelation: "cards"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "binder_cards_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "user_cards"
+            referencedColumns: ["id"]
+          },
         ]
       }
       binders: {
@@ -86,42 +93,51 @@ export type Database = {
       cards: {
         Row: {
           created_at: string
+          grail_rank: number | null
           id: string
           illustrator: string | null
           image_url: string | null
+          is_grail: boolean
           name: string
           number: string | null
           rarity: string | null
           set_id: string | null
           set_name: string | null
+          slab_photo_path: string | null
           tcgdex_id: string
           user_id: string
           year: number | null
         }
         Insert: {
           created_at?: string
+          grail_rank?: number | null
           id?: string
           illustrator?: string | null
           image_url?: string | null
+          is_grail?: boolean
           name: string
           number?: string | null
           rarity?: string | null
           set_id?: string | null
           set_name?: string | null
+          slab_photo_path?: string | null
           tcgdex_id: string
           user_id?: string
           year?: number | null
         }
         Update: {
           created_at?: string
+          grail_rank?: number | null
           id?: string
           illustrator?: string | null
           image_url?: string | null
+          is_grail?: boolean
           name?: string
           number?: string | null
           rarity?: string | null
           set_id?: string | null
           set_name?: string | null
+          slab_photo_path?: string | null
           tcgdex_id?: string
           user_id?: string
           year?: number | null
@@ -289,12 +305,69 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_cards: {
+        Row: {
+          created_at: string | null
+          grail_rank: number | null
+          id: string | null
+          illustrator: string | null
+          image_url: string | null
+          is_grail: boolean | null
+          name: string | null
+          number: string | null
+          rarity: string | null
+          set_id: string | null
+          set_name: string | null
+          slab_photo_path: string | null
+          tcgdex_id: string | null
+          user_id: string | null
+          year: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          grail_rank?: number | null
+          id?: string | null
+          illustrator?: string | null
+          image_url?: string | null
+          is_grail?: boolean | null
+          name?: string | null
+          number?: string | null
+          rarity?: string | null
+          set_id?: string | null
+          set_name?: string | null
+          slab_photo_path?: string | null
+          tcgdex_id?: string | null
+          user_id?: string | null
+          year?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          grail_rank?: number | null
+          id?: string | null
+          illustrator?: string | null
+          image_url?: string | null
+          is_grail?: boolean | null
+          name?: string | null
+          number?: string | null
+          rarity?: string | null
+          set_id?: string | null
+          set_name?: string | null
+          slab_photo_path?: string | null
+          tcgdex_id?: string | null
+          user_id?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       confirm_mori_proposal: {
         Args: { p_action: string; p_card_details?: Json; p_message_id: string }
         Returns: Json
+      }
+      set_card_grail: {
+        Args: { p_card_id: string; p_rank: number }
+        Returns: undefined
       }
     }
     Enums: {

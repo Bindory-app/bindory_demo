@@ -1,6 +1,22 @@
 export const COLLECTION_PAGE_SIZE = 12;
 export const MOON_REQUEST = "Group your moon themed cards";
 
+export function assignGrail<T extends { id: string; is_grail: boolean; grail_rank: number | null }>(
+  cards: T[],
+  cardId: string,
+  rank: number,
+): T[] {
+  if (![1, 2, 3].includes(rank) || !cards.some((card) => card.id === cardId))
+    throw new Error("Choose an owned card and grail 1, 2 or 3");
+  return cards.map((card) =>
+    card.id === cardId
+      ? { ...card, is_grail: true, grail_rank: rank }
+      : card.grail_rank === rank
+        ? { ...card, is_grail: false, grail_rank: null }
+        : card,
+  );
+}
+
 export function collectionPage<
   T extends { name: string; set_name?: string | null; illustrator?: string | null },
 >(cards: T[], query: string, requestedPage: number) {
