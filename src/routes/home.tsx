@@ -89,6 +89,7 @@ function Home() {
       const t = setTimeout(() => setPrompt(true), 600);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, []);
 
   return (
