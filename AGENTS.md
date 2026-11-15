@@ -41,3 +41,5 @@ use the editor.
 - Home uses an opt-in AppShell presentation and an Embla event carousel; other screens keep their existing shell and navigation presentation.
 - Mori confirmation uses a SECURITY INVOKER database function with a locked proposal row and one transaction; binder creation uses owned cards only so suggestions never become invented ownership.
 - Mori UI composes AI Elements conversation, message, tool and composer primitives; assistant borders intentionally match the supplied chat references.
+- Collection tabs read only owner-scoped live rows; shared browser-safe helpers govern card pagination and session notices, while collection changes go through Mori confirmation.
+- Grail slots must remain empty until explicit grail selections and real slab-photo data exist; ordinary card images must not be presented as slab photos.

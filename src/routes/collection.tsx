@@ -1,15 +1,37 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { AppShell, Panel } from "@/components/AppShell";
-import { cards, type Card } from "@/lib/data";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { BookHeart, ChevronLeft, ChevronRight, Image, Layers, Plus, Search, X } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { AppShell } from "@/components/AppShell";
+import { Mori } from "@/components/Mori";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSession } from "@/hooks/use-session";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import { savePendingIntent } from "@/lib/pending-intent";
+import { claimCollectionNotice, collectionPage, MOON_REQUEST } from "@/lib/collection";
+
+type Card = Tables<"cards">;
+type Binder = Tables<"binders">;
+type Memory = Tables<"memories">;
+type Wish = Tables<"wishlist">;
+type Membership = Tables<"binder_cards">;
 
 export const Route = createFileRoute("/collection")({
   head: () => ({
     meta: [
-      { title: "My collection · Bindory" },
-      { name: "description", content: "Browse your Pokémon TCG binder in Bindory." },
-      { property: "og:title", content: "My collection · Bindory" },
-      { property: "og:description", content: "Browse your Pokémon TCG binder." },
+      { title: "My Collection · Bindory" },
+      {
+        name: "description",
+        content: "Your Pokémon TCG cards, binders, private memories and wish list in Bindory.",
+      },
+      { property: "og:title", content: "My Collection · Bindory" },
+      {
+        property: "og:description",
+        content: "Keep your cards and the stories behind them together.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -17,29 +39,531 @@ export const Route = createFileRoute("/collection")({
   component: Collection,
 });
 
+function CardPhoto({
+  src,
+  name,
+  className = "",
+}: {
+  src: string | null;
+  name: string;
+  className?: string;
+}) {
+  return src ? (
+    <img src={src} alt={name} loading="lazy" className={`w-full object-contain ${className}`} />
+  ) : (
+    <div
+      className={`grid w-full place-items-center rounded-xl bg-muted text-muted-foreground ${className}`}
+    >
+      <Image aria-label="No image" className="size-6" />
+    </div>
+  );
+}
+
 function Collection() {
-  const [sel, setSel] = useState<Card>(cards[0]!);
+  const { session, ready } = useSession();
+  const navigate = useNavigate();
+  const [cards, setCards] = useState<Card[]>([]);
+  const [binders, setBinders] = useState<Binder[]>([]);
+  const [memories, setMemories] = useState<Memory[]>([]);
+  const [wishes, setWishes] = useState<Wish[]>([]);
+  const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [photos, setPhotos] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [notice, setNotice] = useState(false);
+  const [detail, setDetail] = useState<Card | Binder | "story" | null>(null);
+  const askMori = (request: string) => {
+    savePendingIntent(request);
+    void navigate({ to: "/" });
+  };
+
+  useEffect(() => {
+    if (!ready) return;
+    setCards([]);
+    setBinders([]);
+    setMemories([]);
+    setWishes([]);
+    setMemberships([]);
+    setPhotos({});
+    if (!session) {
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    setError(false);
+    const uid = session.user.id;
+    void (async () => {
+      const results = await Promise.all([
+        supabase
+          .from("cards")
+          .select("*")
+          .eq("user_id", uid)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("binders")
+          .select("*")
+          .eq("user_id", uid)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("memories")
+          .select("*")
+          .eq("user_id", uid)
+          .order("happened_on", { ascending: false, nullsFirst: false }),
+        supabase
+          .from("wishlist")
+          .select("*")
+          .eq("user_id", uid)
+          .order("created_at", { ascending: false }),
+        supabase.from("binder_cards").select("*").eq("user_id", uid).order("position"),
+      ]);
+      if (!active) return;
+      if (results.some((result) => result.error)) {
+        setError(true);
+        setLoading(false);
+        return;
+      }
+      const [c, b, m, w, links] = results;
+      setCards(c.data ?? []);
+      setBinders(b.data ?? []);
+      setMemories(m.data ?? []);
+      setWishes(w.data ?? []);
+      setMemberships(links.data ?? []);
+      setLoading(false);
+      const paths = (m.data ?? [])
+        .map((row) => row.photo_path)
+        .filter((path): path is string => Boolean(path));
+      if (paths.length) {
+        const { data } = await supabase.storage.from("memory-photos").createSignedUrls(paths, 3600);
+        if (active)
+          setPhotos(
+            Object.fromEntries(
+              (data ?? []).flatMap((row) =>
+                row.path && row.signedUrl ? [[row.path, row.signedUrl]] : [],
+              ),
+            ),
+          );
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [ready, session?.user.id]);
+
+  useEffect(() => {
+    if (!ready || loading || error) return;
+    const timer = setTimeout(() => {
+      try {
+        if (claimCollectionNotice(sessionStorage, session?.user.id ?? "guest")) setNotice(true);
+      } catch {
+        /* Do not repeat when session storage is unavailable. */
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [ready, loading, error, session?.user.id]);
+
+  const results = collectionPage(cards, query, page);
+  const binderCards = (binder: Binder) =>
+    memberships
+      .filter((row) => row.binder_id === binder.id)
+      .flatMap((row) => {
+        const card = cards.find((c) => c.id === row.card_id);
+        return card ? [card] : [];
+      });
+  const memoryList = (story = false) => (
+    <div className="space-y-3">
+      {memories.map((memory) => (
+        <article key={memory.id} className="border-b border-border py-3">
+          <Button
+            variant="ghost"
+            onClick={() =>
+              askMori(`Help me edit my memory "${memory.title}" (memory ID: ${memory.id})`)
+            }
+            className="h-auto w-full justify-start gap-3 whitespace-normal p-0 text-left hover:bg-transparent"
+          >
+            {memory.photo_path && photos[memory.photo_path] ? (
+              <img
+                src={photos[memory.photo_path]}
+                alt={memory.title}
+                className="size-16 shrink-0 rounded-xl object-contain"
+              />
+            ) : (
+              <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
+                <BookHeart />
+              </span>
+            )}
+            <span className="min-w-0">
+              <span className="block text-base font-bold">{memory.title}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {[memory.happened_on, memory.place, memory.with_whom].filter(Boolean).join(" · ")}
+              </span>
+              {!story && memory.note && (
+                <span className="mt-1 line-clamp-2 block text-sm font-normal">{memory.note}</span>
+              )}
+            </span>
+          </Button>
+          {story && (
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{memory.note}</p>
+          )}
+        </article>
+      ))}
+    </div>
+  );
+
   return (
-    <AppShell title="My collection">
-      <Panel className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-4">
-        <img src={sel.image} alt={sel.name} className="aspect-[63/88] w-24 rounded-lg object-contain" />
-        <div className="min-w-0">
-          <p className="truncate text-lg font-bold">{sel.name}</p>
-          <p className="text-sm text-muted-foreground">{sel.set} · {sel.number}</p>
-          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1.5">
-            <span className="grid h-7 w-7 place-items-center rounded-full bg-brand text-sm font-bold text-primary-foreground">9</span>
-            <span className="text-xs font-semibold text-accent-foreground">Likely grade</span>
-          </div>
-        </div>
-      </Panel>
-      <p className="mb-3 mt-6 text-sm font-semibold text-muted-foreground">{cards.length} cards</p>
-      <div className="grid grid-cols-3 gap-3">
-        {cards.map((c) => (
-          <button key={c.id} onClick={() => setSel(c)} className={`rounded-xl p-0.5 ${sel.id === c.id ? "ring-2 ring-primary" : ""}`}>
-            <img src={c.image} alt={c.name} loading="lazy" className="aspect-[63/88] w-full rounded-lg object-contain" />
-          </button>
-        ))}
-      </div>
+    <AppShell
+      title="My Collection"
+      action={
+        <Button
+          size="icon"
+          title="Add a card"
+          aria-label="Add a card to my collection"
+          onClick={() => askMori("Add a card to my collection")}
+          className="rounded-full"
+        >
+          <Plus />
+        </Button>
+      }
+    >
+      <Tabs defaultValue="cards" className="mt-2">
+        <TabsList className="grid h-11 w-full grid-cols-4 rounded-full bg-secondary p-1">
+          {([
+            ["cards", "Cards"],
+            ["binders", "Binders"],
+            ["memories", "Memories"],
+            ["wishlist", "Wish list"],
+          ] as const).map(([value, label]) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className="rounded-full px-1 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-banner-foreground data-[state=active]:shadow-none"
+            >
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {loading ? (
+          <p role="status" className="py-12 text-center text-sm text-muted-foreground">
+            Loading your collection…
+          </p>
+        ) : error ? (
+          <p role="alert" className="py-12 text-center text-sm text-destructive">
+            I could not load your collection. Please try again.
+          </p>
+        ) : (
+          <>
+            <TabsContent value="cards" className="mt-6">
+              <h2 className="text-lg font-bold">My Grails</h2>
+              <div
+                className="mt-3 grid h-[30svh] min-h-40 max-h-72 grid-cols-3 gap-2"
+                aria-label="Top 3 grail photos"
+              >
+                {[1, 2, 3].map((rank) => (
+                  <div
+                    key={rank}
+                    className="flex min-w-0 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-secondary/40 text-muted-foreground"
+                  >
+                    <Image className="size-6" />
+                    <span className="text-xs font-semibold">Grail {rank}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mb-3 mt-6 flex items-center justify-between gap-3">
+                <h2 className="shrink-0 text-lg font-bold">All cards</h2>
+                <label className="flex h-9 min-w-0 max-w-48 items-center gap-1.5 rounded-full border border-border px-2.5">
+                  <Search className="size-3.5 shrink-0 text-muted-foreground" />
+                  <Input
+                    aria-label="Search collection by name, set or artist"
+                    placeholder="Name, set or artist"
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-7 min-w-0 border-0 p-0 text-xs shadow-none focus-visible:ring-0"
+                  />
+                </label>
+              </div>
+              <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+                {results.cards.map((card) => (
+                  <Button
+                    key={card.id}
+                    variant="ghost"
+                    onClick={() => setDetail(card)}
+                    className="h-auto min-w-0 flex-col justify-start gap-1 whitespace-normal p-0 text-left hover:bg-transparent"
+                  >
+                    <CardPhoto
+                      src={card.image_url}
+                      name={card.name}
+                      className="aspect-[63/88] rounded-lg"
+                    />
+                    <span className="block w-full truncate text-xs font-bold">{card.name}</span>
+                    <span className="block w-full truncate text-[10px] font-normal text-muted-foreground">
+                      {card.set_name}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+              {!results.total && (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  {query
+                    ? "I could not find any matching cards."
+                    : "No cards in your collection yet."}
+                </p>
+              )}
+              {!!results.total && (
+                <nav
+                  aria-label="Card pages"
+                  className="mt-5 flex flex-wrap items-center justify-center gap-1"
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Previous page"
+                    disabled={results.page === 1}
+                    onClick={() => setPage(results.page - 1)}
+                  >
+                    <ChevronLeft />
+                  </Button>
+                  {Array.from({ length: results.pages }, (_, i) => (
+                    <Button
+                      key={i}
+                      aria-label={`Page ${i + 1}`}
+                      aria-current={results.page === i + 1 ? "page" : undefined}
+                      variant={results.page === i + 1 ? "default" : "ghost"}
+                      size="icon"
+                      onClick={() => setPage(i + 1)}
+                      className="rounded-full"
+                    >
+                      {i + 1}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Next page"
+                    disabled={results.page === results.pages}
+                    onClick={() => setPage(results.page + 1)}
+                  >
+                    <ChevronRight />
+                  </Button>
+                </nav>
+              )}
+            </TabsContent>
+            <TabsContent value="binders" className="mt-5">
+              <div className="grid grid-cols-2 gap-3">
+                {binders.map((binder) => {
+                  const contents = binderCards(binder);
+                  return (
+                    <Button
+                      key={binder.id}
+                      variant="outline"
+                      onClick={() => setDetail(binder)}
+                      className="h-auto min-w-0 flex-col items-start gap-3 whitespace-normal rounded-2xl p-3 text-left shadow-none"
+                    >
+                      <div className="grid aspect-[4/3] w-full grid-cols-3 gap-1 rounded-xl bg-secondary p-2">
+                        {contents.length ? (
+                          contents
+                            .slice(0, 3)
+                            .map((card) => (
+                              <CardPhoto
+                                key={card.id}
+                                src={card.image_url}
+                                name={card.name}
+                                className="h-full min-h-0"
+                              />
+                            ))
+                        ) : (
+                          <Layers className="col-span-3 m-auto size-9 text-primary" />
+                        )}
+                      </div>
+                      <span className="font-bold">{binder.name}</span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {contents.length} cards
+                      </span>
+                    </Button>
+                  );
+                })}
+                <Button
+                  variant="outline"
+                  onClick={() => askMori("Build a new binder for my collection")}
+                  className="min-h-48 flex-col gap-3 rounded-2xl border-dashed bg-secondary/40 shadow-none"
+                >
+                  <Plus className="size-8 text-primary" />
+                  <span className="font-bold">New binder</span>
+                </Button>
+              </div>
+            </TabsContent>
+            <TabsContent value="memories" className="mt-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold">Memories</h2>
+                <Button
+                  variant="ghost"
+                  onClick={() => askMori("Save a memory")}
+                  className="rounded-full text-primary"
+                >
+                  <Plus />
+                  Add
+                </Button>
+              </div>
+              {memories.length ? (
+                memoryList()
+              ) : (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  No memories saved yet.
+                </p>
+              )}
+              <Button
+                variant="outline"
+                disabled={!memories.length}
+                onClick={() => setDetail("story")}
+                className="mt-4 w-full rounded-full"
+              >
+                <BookHeart />
+                View my story
+              </Button>
+            </TabsContent>
+            <TabsContent value="wishlist" className="mt-5">
+              <div className="space-y-3">
+                {wishes.map((wish) => (
+                  <Button
+                    key={wish.id}
+                    variant="outline"
+                    onClick={() => askMori(`Tell me about ${wish.name} on my wish list`)}
+                    className="h-auto w-full justify-start gap-4 whitespace-normal rounded-2xl p-3 text-left shadow-none"
+                  >
+                    <CardPhoto
+                      src={wish.image_url}
+                      name={wish.name}
+                      className="aspect-[63/88] max-w-20 shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-bold">{wish.name}</span>
+                      <span className="mt-2 block text-xs font-normal leading-relaxed text-muted-foreground">
+                        {wish.note || "No reason saved yet."}
+                      </span>
+                    </span>
+                  </Button>
+                ))}
+              </div>
+              {!wishes.length && (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  Your wish list is empty.
+                </p>
+              )}
+            </TabsContent>
+          </>
+        )}
+      </Tabs>
+      <Dialog.Root open={notice} onOpenChange={setNotice}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/20" />
+          <Dialog.Content
+            aria-describedby={undefined}
+            className="fixed bottom-28 left-1/2 z-50 w-[calc(100%-2rem)] max-w-[358px] -translate-x-1/2 rounded-3xl border border-border bg-card p-5 shadow-orb"
+          >
+            <Dialog.Close asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Dismiss Mori noticed"
+                className="absolute right-2 top-2 rounded-full"
+              >
+                <X />
+              </Button>
+            </Dialog.Close>
+            <div className="flex items-start gap-3 pr-4">
+              <Mori className="h-16 w-12 shrink-0" />
+              <div>
+                <p className="text-xs font-bold text-primary">Mori noticed</p>
+                <Dialog.Title className="mt-1 text-lg font-bold leading-snug">
+                  {MOON_REQUEST}
+                </Dialog.Title>
+                <Button
+                  onClick={() => {
+                    setNotice(false);
+                    askMori(MOON_REQUEST);
+                  }}
+                  className="mt-4 rounded-full"
+                >
+                  Ask Mori
+                </Button>
+              </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+      <Dialog.Root
+        open={detail !== null}
+        onOpenChange={(open) => {
+          if (!open) setDetail(null);
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/40" />
+          <Dialog.Content
+            aria-describedby={undefined}
+            className="fixed left-1/2 top-1/2 z-50 max-h-[80dvh] w-[calc(100%-2rem)] max-w-[358px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-border bg-card p-5"
+          >
+            <Dialog.Title className="pr-9 text-xl font-bold">
+              {detail === "story" ? "My story" : detail?.name}
+            </Dialog.Title>
+            <Dialog.Close asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Close details"
+                className="absolute right-3 top-3 rounded-full"
+              >
+                <X />
+              </Button>
+            </Dialog.Close>
+            {detail === "story" ? (
+              memoryList(true)
+            ) : detail && "tcgdex_id" in detail ? (
+              <>
+                <CardPhoto
+                  src={detail.image_url}
+                  name={detail.name}
+                  className="mx-auto mt-4 h-72"
+                />
+                <p className="mt-4 text-center text-sm text-muted-foreground">
+                  {[detail.set_name, detail.number, detail.illustrator].filter(Boolean).join(" · ")}
+                </p>
+              </>
+            ) : (
+              detail && (
+                <>
+                  <p className="mt-2 text-sm text-muted-foreground">{detail.description}</p>
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    {binderCards(detail).map((card) => (
+                      <CardPhoto
+                        key={card.id}
+                        src={card.image_url}
+                        name={card.name}
+                        className="aspect-[63/88]"
+                      />
+                    ))}
+                  </div>
+                  {!binderCards(detail).length && (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      No cards in this binder yet.
+                    </p>
+                  )}
+                  <Button
+                    className="mt-4 w-full rounded-full"
+                    onClick={() => askMori(`Help me with my binder "${detail.name}"`)}
+                  >
+                    Ask Mori
+                  </Button>
+                </>
+              )
+            )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </AppShell>
   );
 }
