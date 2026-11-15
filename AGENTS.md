@@ -28,3 +28,6 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Brand tokens and phone shell live in src/styles.css and src/components/AppShell.tsx; every page wraps in AppShell so the 390px column and bottom bar stay consistent.
+- Mori replies come only from src/lib/data.ts via src/lib/mori.ts so Mori never invents facts.
