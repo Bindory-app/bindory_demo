@@ -405,12 +405,20 @@ function Collection() {
                     <Button
                       key={binder.id}
                       variant="outline"
-                      onClick={() => setDetail(binder)}
+                      onClick={() =>
+                        void navigate({ to: "/binders/$id", params: { id: binder.id } })
+                      }
                       className="h-auto min-w-0 flex-col items-start gap-3 whitespace-normal rounded-2xl p-3 text-left shadow-none"
                     >
                       <div className="grid aspect-[4/3] w-full grid-cols-3 gap-1 rounded-xl bg-secondary p-2">
                         {contents.length ? (
                           contents
+                            .slice()
+                            .sort(
+                              (a, b) =>
+                                Number(b.id === binder.cover_card_id) -
+                                Number(a.id === binder.cover_card_id),
+                            )
                             .slice(0, 3)
                             .map((card) => (
                               <CardPhoto

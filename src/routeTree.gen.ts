@@ -18,6 +18,8 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as TrendingBindersRouteImport } from './routes/trending-binders'
 import { Route as ApiMoriChatRouteImport } from './routes/api/mori-chat'
+import { Route as BIdRouteImport } from './routes/b.$id'
+import { Route as BindersIdRouteImport } from './routes/binders.$id'
 import { Route as EventsAnniversaryRouteImport } from './routes/events.anniversary'
 
 const IndexRoute = IndexRouteImport.update({
@@ -65,6 +67,16 @@ const ApiMoriChatRoute = ApiMoriChatRouteImport.update({
   path: '/api/mori-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BIdRoute = BIdRouteImport.update({
+  id: '/b/$id',
+  path: '/b/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BindersIdRoute = BindersIdRouteImport.update({
+  id: '/binders/$id',
+  path: '/binders/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventsAnniversaryRoute = EventsAnniversaryRouteImport.update({
   id: '/events/anniversary',
   path: '/events/anniversary',
@@ -81,6 +93,8 @@ export interface FileRoutesByFullPath {
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
   '/api/mori-chat': typeof ApiMoriChatRoute
+  '/b/$id': typeof BIdRoute
+  '/binders/$id': typeof BindersIdRoute
   '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +107,8 @@ export interface FileRoutesByTo {
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
   '/api/mori-chat': typeof ApiMoriChatRoute
+  '/b/$id': typeof BIdRoute
+  '/binders/$id': typeof BindersIdRoute
   '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRoutesById {
@@ -106,6 +122,8 @@ export interface FileRoutesById {
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
   '/api/mori-chat': typeof ApiMoriChatRoute
+  '/b/$id': typeof BIdRoute
+  '/binders/$id': typeof BindersIdRoute
   '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +138,8 @@ export interface FileRouteTypes {
     | '/studio'
     | '/trending-binders'
     | '/api/mori-chat'
+    | '/b/$id'
+    | '/binders/$id'
     | '/events/anniversary'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +152,8 @@ export interface FileRouteTypes {
     | '/studio'
     | '/trending-binders'
     | '/api/mori-chat'
+    | '/b/$id'
+    | '/binders/$id'
     | '/events/anniversary'
   id:
     | '__root__'
@@ -144,6 +166,8 @@ export interface FileRouteTypes {
     | '/studio'
     | '/trending-binders'
     | '/api/mori-chat'
+    | '/b/$id'
+    | '/binders/$id'
     | '/events/anniversary'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +181,8 @@ export interface RootRouteChildren {
   StudioRoute: typeof StudioRoute
   TrendingBindersRoute: typeof TrendingBindersRoute
   ApiMoriChatRoute: typeof ApiMoriChatRoute
+  BIdRoute: typeof BIdRoute
+  BindersIdRoute: typeof BindersIdRoute
   EventsAnniversaryRoute: typeof EventsAnniversaryRoute
 }
 
@@ -225,6 +251,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMoriChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/b/$id': {
+      id: '/b/$id'
+      path: '/b/$id'
+      fullPath: '/b/$id'
+      preLoaderRoute: typeof BIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/binders/$id': {
+      id: '/binders/$id'
+      path: '/binders/$id'
+      fullPath: '/binders/$id'
+      preLoaderRoute: typeof BindersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events/anniversary': {
       id: '/events/anniversary'
       path: '/events/anniversary'
@@ -245,6 +285,8 @@ const rootRouteChildren: RootRouteChildren = {
   StudioRoute: StudioRoute,
   TrendingBindersRoute: TrendingBindersRoute,
   ApiMoriChatRoute: ApiMoriChatRoute,
+  BIdRoute: BIdRoute,
+  BindersIdRoute: BindersIdRoute,
   EventsAnniversaryRoute: EventsAnniversaryRoute,
 }
 export const routeTree = rootRouteImport

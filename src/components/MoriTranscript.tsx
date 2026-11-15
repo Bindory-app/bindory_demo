@@ -59,6 +59,7 @@ export function MoriTranscript({
               <ConfirmCard
                 key={index}
                 payload={part.payload}
+                messageId={message.id}
                 working={working}
                 onConfirm={() => act(message, "confirm")}
                 onEdit={() => act(message, "edit")}

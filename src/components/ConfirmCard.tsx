@@ -1,19 +1,24 @@
 import { Check, Pencil } from "lucide-react";
 import { proposalTitle, type ProposalPayload } from "@/lib/mori-tools";
 import { Button } from "@/components/ui/button";
+import { BinderPreview } from "./BinderPreview";
 
 export function ConfirmCard({
   payload,
   onConfirm,
   onEdit,
   working,
+  messageId,
 }: {
   payload: ProposalPayload;
   onConfirm: () => void;
   onEdit: () => void;
   working: boolean;
+  messageId?: string | undefined;
 }) {
   const p = payload;
+  if (p.tool === "create_binder" && messageId)
+    return <BinderPreview payload={p} messageId={messageId} working={working} />;
   const cards =
     p.tool === "create_binder"
       ? p.cards

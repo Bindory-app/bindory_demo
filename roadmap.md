@@ -1,4 +1,8 @@
 # Home update
+## Binder detail and sharing
+- [x] Add owned binder editing, covers, nine-card swipe pages and tap-to-read reasons.
+- [x] Add confirmed public sharing and a signed-out public binder page.
+- [x] Add Mori binder previews with Rename, Create and Publish; verify saved rename/reasons, signed-out public/private access and phone layout. Sixteen regression tests passed.
 ## My Collection
 - [x] Match supplied collection layout and unify icon-only active navigation across screens.
 - [x] Persist three owner-selected grail ranks, add menus/picker and private slab-photo uploads.

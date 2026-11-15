@@ -68,27 +68,48 @@ export type Database = {
       }
       binders: {
         Row: {
+          cover_card_id: string | null
           created_at: string
           description: string | null
           id: string
+          is_public: boolean
           name: string
           user_id: string
         }
         Insert: {
+          cover_card_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          is_public?: boolean
           name: string
           user_id?: string
         }
         Update: {
+          cover_card_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          is_public?: boolean
           name?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "binders_cover_card_id_fkey"
+            columns: ["cover_card_id"]
+            isOneToOne: false
+            referencedRelation: "cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "binders_cover_card_id_fkey"
+            columns: ["cover_card_id"]
+            isOneToOne: false
+            referencedRelation: "user_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cards: {
         Row: {
@@ -361,9 +382,25 @@ export type Database = {
       }
     }
     Functions: {
+      confirm_binder_preview: {
+        Args: { p_message: string; p_name: string; p_publish?: boolean }
+        Returns: Json
+      }
       confirm_mori_proposal: {
         Args: { p_action: string; p_card_details?: Json; p_message_id: string }
         Returns: Json
+      }
+      read_public_binder: { Args: { p_id: string }; Returns: Json }
+      save_binder_detail: {
+        Args: {
+          p_cards: Json
+          p_cover: string
+          p_description: string
+          p_id: string
+          p_name: string
+          p_public: boolean
+        }
+        Returns: undefined
       }
       set_card_grail: {
         Args: { p_card_id: string; p_rank: number }
