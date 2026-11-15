@@ -1,4 +1,6 @@
-const img = (set: string, num: string) => `https://assets.tcgdex.net/en/${set}/${num}/high.png`;
+import { cardImage } from "./tcgdex";
+
+const img = (set: string, num: string) => cardImage(`https://assets.tcgdex.net/en/${set}/${num}`)!;
 
 export type Card = { id: string; name: string; set: string; number: string; image: string; addedOn: string };
 

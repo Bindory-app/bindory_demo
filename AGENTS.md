@@ -34,3 +34,4 @@ use the editor.
 - All user tables are owner-only via RLS on user_id = auth.uid(); profiles row is created by a trigger on auth.users.
 - Mori replies come only from src/lib/data.ts via src/lib/mori.ts so Mori never invents facts.
 - New-user onboarding runs inside the Ask Mori chat (steps in src/lib/onboarding.ts); profiles.onboarded_at decides whether it runs, and the bottom bar stays hidden until it finishes.
+- All card lookups go through src/lib/tcgdex.ts (TCGdex search + detail); images are hotlinked via cardImage() and never stored.

@@ -28,3 +28,9 @@ describe("Onboarding", () => {
     expect(onboardingSteps[1]!.reply("Umbreon VMAX")).toBe("Umbreon VMAX. A lovely place to start. I will remember it.");
   });
 });
+import { cardImage } from "@/lib/tcgdex";
+describe("TCGdex images", () => {
+  it("hotlinks the high webp from the TCGdex base path", () => {
+    expect(cardImage("https://assets.tcgdex.net/en/base/base1/4")).toBe("https://assets.tcgdex.net/en/base/base1/4/high.webp");
+  });
+});

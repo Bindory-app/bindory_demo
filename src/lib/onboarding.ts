@@ -28,12 +28,12 @@ export const onboardingSteps: OnboardingStep[] = [
   },
 ];
 
+import { cardImage, searchCards as tcgSearch } from "./tcgdex";
+
 export type CardMatch = { id: string; name: string; image?: string | undefined };
 
-/** Looks up cards by name on TCGdex; images stay hotlinked. */
+/** Card matches for the "first card" question, via the TCGdex service. */
 export async function searchCards(name: string): Promise<CardMatch[]> {
-  const res = await fetch(`https://api.tcgdex.net/v2/en/cards?name=${encodeURIComponent(name)}&pagination:itemsPerPage=4`);
-  if (!res.ok) return [];
-  const data = (await res.json()) as { id: string; name: string; image?: string }[];
-  return data.slice(0, 4).map((c) => ({ id: c.id, name: c.name, image: c.image ? `${c.image}/low.webp` : undefined }));
+  const found = await tcgSearch(name, 4);
+  return found.map((c) => ({ id: c.id, name: c.name, image: cardImage(c.image, "low") }));
 }
