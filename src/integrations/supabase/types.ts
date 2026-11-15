@@ -390,6 +390,7 @@ export type Database = {
         Args: { p_action: string; p_card_details?: Json; p_message_id: string }
         Returns: Json
       }
+      list_public_binders: { Args: { p_query?: string }; Returns: Json }
       read_public_binder: { Args: { p_id: string }; Returns: Json }
       save_binder_detail: {
         Args: {
