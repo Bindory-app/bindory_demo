@@ -12,11 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as HomeRouteImport } from './routes/home'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as MoriRouteImport } from './routes/mori'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SearchRouteImport } from './routes/search'
-import { Route as SignupRouteImport } from './routes/signup'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -33,16 +30,6 @@ const HomeRoute = HomeRouteImport.update({
   path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MoriRoute = MoriRouteImport.update({
-  id: '/mori',
-  path: '/mori',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -53,85 +40,43 @@ const SearchRoute = SearchRouteImport.update({
   path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
   '/home': typeof HomeRoute
-  '/login': typeof LoginRoute
-  '/mori': typeof MoriRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
-  '/signup': typeof SignupRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
   '/home': typeof HomeRoute
-  '/login': typeof LoginRoute
-  '/mori': typeof MoriRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
-  '/signup': typeof SignupRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
   '/home': typeof HomeRoute
-  '/login': typeof LoginRoute
-  '/mori': typeof MoriRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
-  '/signup': typeof SignupRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/collection'
-    | '/home'
-    | '/login'
-    | '/mori'
-    | '/profile'
-    | '/search'
-    | '/signup'
+  fullPaths: '/' | '/collection' | '/home' | '/profile' | '/search'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/collection'
-    | '/home'
-    | '/login'
-    | '/mori'
-    | '/profile'
-    | '/search'
-    | '/signup'
-  id:
-    | '__root__'
-    | '/'
-    | '/collection'
-    | '/home'
-    | '/login'
-    | '/mori'
-    | '/profile'
-    | '/search'
-    | '/signup'
+  to: '/' | '/collection' | '/home' | '/profile' | '/search'
+  id: '__root__' | '/' | '/collection' | '/home' | '/profile' | '/search'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CollectionRoute: typeof CollectionRoute
   HomeRoute: typeof HomeRoute
-  LoginRoute: typeof LoginRoute
-  MoriRoute: typeof MoriRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
-  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -157,20 +102,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mori': {
-      id: '/mori'
-      path: '/mori'
-      fullPath: '/mori'
-      preLoaderRoute: typeof MoriRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -185,13 +116,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -199,11 +123,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CollectionRoute: CollectionRoute,
   HomeRoute: HomeRoute,
-  LoginRoute: LoginRoute,
-  MoriRoute: MoriRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
-  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

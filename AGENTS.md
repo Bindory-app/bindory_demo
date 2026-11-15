@@ -29,5 +29,7 @@ use the editor.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
 
-- Brand tokens and phone shell live in src/styles.css and src/components/AppShell.tsx; signed-in pages wrap in AppShell, while the guest Ask Mori screen at / renders its own shell without the bottom bar.
+- Brand tokens and phone shell live in src/styles.css and src/components/AppShell.tsx; signed-in pages wrap in AppShell; Ask Mori at / renders its own shell and shows the bottom bar only when signed in.
+- Guest actions on / save the request (src/lib/pending-intent.ts) and open AuthSheet; after sign-in the saved request is replayed so the conversation continues.
+- All user tables are owner-only via RLS on user_id = auth.uid(); profiles row is created by a trigger on auth.users.
 - Mori replies come only from src/lib/data.ts via src/lib/mori.ts so Mori never invents facts.

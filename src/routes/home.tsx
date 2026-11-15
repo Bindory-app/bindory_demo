@@ -24,7 +24,7 @@ function Home() {
           <div className="min-w-0">
             <p className="text-sm font-semibold opacity-90">Mori says</p>
             <p className="mt-1 text-lg font-bold leading-snug">You added {cards.length} cards this season. Want to look back?</p>
-            <Link to="/mori" className="mt-4 inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm font-bold text-primary">
+            <Link to="/" className="mt-4 inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm font-bold text-primary">
               <MessageCircle className="h-4 w-4" /> Ask Mori
             </Link>
           </div>

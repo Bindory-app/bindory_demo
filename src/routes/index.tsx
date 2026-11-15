@@ -1,8 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { BookHeart, Camera, Layers, Mic, Plus, SendHorizontal, WandSparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AuthSheet } from "@/components/AuthSheet";
+import { BottomNav } from "@/components/AppShell";
+import { useSession } from "@/hooks/use-session";
+import { savePendingIntent, takePendingIntent } from "@/lib/pending-intent";
+import { supabase } from "@/integrations/supabase/client";
 import { Mori } from "@/components/Mori";
-import { guestReply } from "@/lib/mori";
+import { moriReply } from "@/lib/mori";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -28,11 +33,34 @@ type Msg = { from: "me" | "mori"; text: string };
 function GuestAskMori() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
+  const { session, ready } = useSession();
+  const [sheet, setSheet] = useState(false);
+
+  const reply = async (t: string) => {
+    const answer = moriReply(t);
+    setMsgs((m) => [...m, { from: "me", text: t }, { from: "mori", text: answer }]);
+    const { error } = await supabase.from("mori_messages").insert([
+      { role: "user", content: t },
+      { role: "mori", content: answer },
+    ]);
+    if (error) console.error("Could not save Mori chat", error);
+  };
+
+  // After sign-in, carry on with whatever the guest asked.
+  useEffect(() => {
+    if (!session) return;
+    setSheet(false);
+    const pending = takePendingIntent();
+    if (pending) void reply(pending);
+  }, [session]);
+
   const send = (t: string) => {
     if (!t.trim()) return;
-    setMsgs((m) => [...m, { from: "me", text: t }, { from: "mori", text: guestReply(t) }]);
     setText("");
+    if (!session) { savePendingIntent(t); setSheet(true); return; }
+    void reply(t);
   };
+  const openAuth = () => setSheet(true);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-canvas-outer">
@@ -41,13 +69,15 @@ function GuestAskMori() {
           <p className="min-w-0 truncate text-sm font-bold">
             Ask Mori <span className="font-medium text-muted-foreground">· your Bindory Agent</span>
           </p>
-          <div className="flex shrink-0 gap-1.5">
-            <Link to="/login" className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-bold">Log in</Link>
-            <Link to="/signup" className="rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-primary-foreground">Sign up</Link>
-          </div>
+          {ready && !session && (
+            <div className="flex shrink-0 gap-1.5">
+              <button onClick={openAuth} className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-bold">Log in</button>
+              <button onClick={openAuth} className="rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-primary-foreground">Sign up</button>
+            </div>
+          )}
         </header>
 
-        <main className="flex flex-1 flex-col px-5 pb-28">
+        <main className={`flex flex-1 flex-col px-5 ${session ? "pb-44" : "pb-28"}`}>
           {msgs.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center">
               <Mori className="h-52 w-52" />
@@ -70,12 +100,14 @@ function GuestAskMori() {
           )}
         </main>
 
-        <form onSubmit={(e) => { e.preventDefault(); send(text); }} className="fixed bottom-5 left-1/2 z-10 flex w-[calc(100%-2rem)] max-w-[358px] -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-card p-1.5 shadow-orb">
+        <form onSubmit={(e) => { e.preventDefault(); send(text); }} className={`fixed ${session ? "bottom-24" : "bottom-5"} left-1/2 z-10 flex w-[calc(100%-2rem)] max-w-[358px] -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-card p-1.5 shadow-orb`}>
           <button type="button" aria-label="Add a photo" className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-primary hover:bg-accent"><Camera className="h-5 w-5" /></button>
           <input value={text} onChange={(e) => setText(e.target.value)} aria-label="Message Mori" autoFocus className="min-w-0 flex-1 bg-transparent px-1 outline-none" />
           <button type="button" aria-label="Voice message" className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-primary hover:bg-accent"><Mic className="h-5 w-5" /></button>
           <button aria-label="Send" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-primary-foreground"><SendHorizontal className="h-5 w-5" /></button>
         </form>
+        {session && <BottomNav />}
+        <AuthSheet open={sheet} onOpenChange={setSheet} />
       </div>
     </div>
   );
