@@ -1902,7 +1902,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   return '';}
  const homeHTML=keys=>{const modules=keys.reduce((a,k)=>a.concat(HOME_GROUPS[k]),[]).filter(m=>m!=='progress');return homeModule('progress')+modules.map(homeModule).join('');};
  function greeting(){const h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
- function renderToday(){qsa('[data-streak]',app).forEach(x=>x.textContent=S.streak);qsa('.cp-streak-ring',app).forEach(r=>r.style.setProperty('--s',Math.min(7,S.streak)));const b=qs('[data-home-checkin]',app);b.classList.toggle('is-claimed',S.checkedIn);qs('[data-checkin-label]',b).textContent=S.checkedIn?'Checked in today':'Check in · +10 points';qs('[data-home-prompt-text]',app).textContent=PROMPTS[S.promptIndex];qsa('[data-greeting]',app).forEach(x=>x.textContent=greeting()+', Wing');}
+ function renderToday(){qsa('[data-streak]',app).forEach(x=>x.textContent=S.streak);qsa('.cp-streak-ring',app).forEach(r=>r.style.setProperty('--s',Math.min(7,S.streak)));const b=qs('[data-home-checkin]',app);b.classList.toggle('is-claimed',S.checkedIn);qs('[data-checkin-label]',b).textContent=S.checkedIn?'Checked in today':'Check in · +10 points';qs('[data-home-prompt-text]',app).textContent=PROMPTS[S.promptIndex];qsa('[data-greeting]',app).forEach(x=>x.textContent=greeting()+', '+(window.bdFirstName||'Wing'));}
  function renderHome(){homeOrder.innerHTML=homeHTML(homeKeys());renderToday();}
 
  /* Points */
@@ -2322,7 +2322,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
  renderIntroInto(screen('intro'),0);renderQuestionInto(screen('question'),0);renderHome();renderMyBinder();renderBinder();renderCard();renderFeed();renderSaved();renderCollector();renderPB();renderJourney();renderStory();renderProfile();renderFollowing();renderBrowser();renderDraft();renderAi();setPoints(S.points);updateAppearanceSummary();
 
  /* Hooks for the design-library board */
- window.cpProto={go,back,current:()=>current,S,CARDS,COLLECTORS,IMG,R,labels,ownBinder,count,binderBg,cardArtHTML,grailShowcaseHTML,grailCarouselHTML,pbTile,checkIn,renderMyBinder,renderJourney,renderProfile,setPoints,toast,centerCarousel,closeSheets,variant(root,routeName,v){const s=root.querySelector('.cp-screen[data-screen="'+routeName+'"]');if(!s||!v)return;
+ window.cpProto={GRAIL_KEYS,go,back,current:()=>current,S,CARDS,COLLECTORS,IMG,R,labels,ownBinder,count,binderBg,cardArtHTML,grailShowcaseHTML,grailCarouselHTML,pbTile,checkIn,renderMyBinder,renderJourney,renderProfile,setPoints,toast,centerCarousel,closeSheets,variant(root,routeName,v){const s=root.querySelector('.cp-screen[data-screen="'+routeName+'"]');if(!s||!v)return;
   if(routeName==='intro')return renderIntroInto(s,Number(v)-1);
   if(routeName==='question')return renderQuestionInto(s,Number(v)-1);
   if(routeName==='home')return void(s.querySelector('.cp-home-order').innerHTML=homeHTML(orderFor(v)));
@@ -2355,12 +2355,12 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   /* ------------------------------------------------------------------ */
   const isCatalogCard = k => CARDS[k] && !/^poke\d/.test(k) && !/^grail-/.test(k);
   const binderOf = k => S.binders.find(b => b.cards.includes(k));
-  const owned = k => !!binderOf(k);
-  const ownedCards = () => [...new Set(S.binders.flatMap(b => b.cards))].filter(isCatalogCard);
+  const owned = k => !!binderOf(k) || (S.loose || []).includes(k);
+  const ownedCards = () => [...new Set(S.binders.flatMap(b => b.cards).concat(S.loose || []))].filter(isCatalogCard);
   const totalCards = () => S.binders.reduce((n, b) => n + P.count(b), 0);
   const cardImg = k => (CARDS[k] && CARDS[k].img && IMG[CARDS[k].img]) ? IMG[CARDS[k].img] : '';
   const MOON = ['umbreon', 'espeon', 'cresselia', 'lunatone', 'absol', 'mismagius', 'gengar', 'houndoom'].filter(k => CARDS[k]);
-  const L = { wish: ['lugia', 'suicune'].filter(k => CARDS[k]), colTab: 'cards', studio: [], posted: false };
+  const L = window.bdL = { wish: ['lugia', 'suicune'].filter(k => CARDS[k]), colTab: 'cards', studio: [], posted: false };
   const wishReason = { lugia: 'Completes your Neo trio idea', suicune: 'Pairs with Lugia artwork' };
 
   const findCard = text => {
@@ -2411,7 +2411,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   const STARTERS = [['memory', 'Save a memory'], ['add', 'Add a card'], ['binder', 'Build a binder'], ['studio', 'Create something']];
   function renderEmpty() {
     thread.innerHTML =
-      '<div class="cp-mori-hello">' + face('cp-mori-face-xl') + '<b>' + (guest ? 'Hi, I am Mori. What shall we do today?' : 'Hi Wing, what shall we do today?') + '</b></div>' +
+      '<div class="cp-mori-hello">' + face('cp-mori-face-xl') + '<b>' + (guest ? 'Hi, I am Mori. What shall we do today?' : 'Hi ' + (window.bdFirstName || 'Wing') + ', what shall we do today?') + '</b></div>' +
       '<div class="cp-mori-starters">' + STARTERS.map(([k, t]) => '<button data-mori-prompt="' + k + '">' + t + '</button>').join('') + '</div>';
     moriScreen.classList.add('is-empty');
   }
@@ -2837,7 +2837,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     await think('Setting up your Bindory', 800);
     moriScreen.classList.remove('is-onboarding');
     const pending = M.afterAuth && M.afterAuth.label;
-    say('<p>You are all set, Wing. Ask me anything, any time. I live in the middle of your navigation bar.</p>' + chips([...(pending ? [[M.afterAuth.label, act('after-auth')]] : []), ['Go to Home', act('onboard-done')], ...(pending ? [] : [['Add my first card', act('scan')]])]));
+    say('<p>You are all set, ' + (window.bdFirstName || 'Wing') + '. Ask me anything, any time. I live in the middle of your navigation bar.</p>' + chips([...(pending ? [[M.afterAuth.label, act('after-auth')]] : []), ['Go to Home', act('onboard-done')], ...(pending ? [] : [['Add my first card', act('scan')]])]));
   }
 
   /* ---- Click handling ------------------------------------------------ */
@@ -2937,7 +2937,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   const CARDS_PER_PAGE = 12;
   L.cardQuery = ''; L.cardPage = 0;
   /* Every card in any binder, including the 151 set; grails have their own row above. */
-  const allOwnedCards = () => [...new Set(S.binders.flatMap(b => b.cards))].filter(k => CARDS[k] && !/^grail-/.test(k));
+  const allOwnedCards = () => [...new Set(S.binders.flatMap(b => b.cards).concat(S.loose || []))].filter(k => CARDS[k] && !/^grail-/.test(k));
   function renderCardResults() {
     const box = qs('[data-col-card-results]', colScreen); if (!box) return;
     const q = L.cardQuery.trim().toLowerCase();
@@ -3129,7 +3129,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     await wait(900);
     closeAuth(); setGuest(false);
     if (signup) { toast('Account created'); await onboardStart(); }
-    else { toast('Welcome back, Wing'); reset(); if (M.afterAuth) runAfterAuth(); }
+    else { toast('Welcome back, ' + (window.bdFirstName || 'Wing')); reset(); if (M.afterAuth) runAfterAuth(); }
   }
   function runAfterAuth() {
     const a = M.afterAuth; M.afterAuth = null; if (!a) return;
@@ -3416,6 +3416,118 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     return true;
   };
 
+  /* ---------------- Your real data in the wireframe's screens ---------------- */
+  // Fills the wireframe's own data (cards, binders, grails, memories, wish list, points,
+  // followers, name) from your account, then asks the wireframe to redraw. No markup changes.
+  const keyFor = (id) => "r" + String(id).replace(/-/g, "").slice(0, 16);
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const COLORS = ["purple", "pink", "blue"];
+
+  function addCard(key, c) {
+    const meta = [c.set_name, c.number && "#" + c.number].filter(Boolean).join(" · ");
+    P.CARDS[key] = {
+      name: c.name, glyph: "✦", meta, type: c.rarity || "", artist: c.illustrator || "Unknown artist",
+      set: c.set_name || "", theme: "", note: "", home: "", img: key,
+      caption: [c.name, c.rarity, [c.set_name, c.number].filter(Boolean).join(" ")].filter(Boolean).join(" · "),
+    };
+    if (c.image_url) P.IMG[key] = c.image_url;
+  }
+
+  function replaceProfileText(name, handle, bio) {
+    const root = app.querySelector('[data-screen="profile"]');
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const n = walker.currentNode;
+      let v = n.nodeValue;
+      if (name) v = v.replace(/Wing Wu/g, name);
+      if (handle) v = v.replace(/wingcollects/g, handle);
+      if (bio) v = v.replace(/Cards, memories and moonlit finds\./g, bio);
+      if (v !== n.nodeValue) n.nodeValue = v;
+    }
+  }
+
+  async function loadMyData() {
+    if (!(await fresh())) return;
+    const uid = session.user.id;
+    const [prof, cards, binders, links, mems, wish, pts, fers, fing] = await Promise.all([
+      sb.from("profiles").select("display_name, username, bio").eq("id", uid).maybeSingle(),
+      sb.from("cards").select("*").eq("user_id", uid).order("created_at", { ascending: false }),
+      sb.from("binders").select("id, name, description, is_public, cover_image").eq("user_id", uid).order("created_at"),
+      sb.from("binder_cards").select("binder_id, card_id, position").eq("user_id", uid).order("position"),
+      sb.from("memories").select("*").eq("user_id", uid).order("happened_on", { ascending: false, nullsFirst: false }),
+      sb.from("wishlist").select("*").eq("user_id", uid).order("created_at", { ascending: false }),
+      sb.from("points_events").select("points").eq("user_id", uid),
+      sb.from("follows").select("follower_id", { count: "exact", head: true }).eq("followee_id", uid),
+      sb.from("follows").select("followee_id", { count: "exact", head: true }).eq("follower_id", uid),
+    ]);
+    if (cards.error || binders.error || links.error) return; // keep what's showing rather than half-fill it
+    const S = P.S;
+
+    // Cards
+    const byId = new Map();
+    for (const c of cards.data) { const k = keyFor(c.id); addCard(k, c); byId.set(c.id, k); }
+
+    // Binders: artwork cover when set, otherwise the wireframe's own colour
+    const inBinder = new Set();
+    S.binders = binders.data.map((b, i) => {
+      const keys = links.data.filter((l) => l.binder_id === b.id).map((l) => byId.get(l.card_id)).filter(Boolean);
+      keys.forEach((k) => inBinder.add(k));
+      return {
+        id: keyFor(b.id), name: b.name, type: b.description || "Binder", privacy: b.is_public ? "Public" : "Private",
+        color: COLORS[i % COLORS.length], cover: b.cover_image ? { type: "img", src: b.cover_image } : null,
+        coverNote: "Binder cover", cards: keys, extra: 0,
+      };
+    });
+    S.loose = [...byId.values()].filter((k) => !inBinder.has(k));
+    if (S.binders[0]) S.currentBinder = S.binders[0].id;
+
+    // Grails: your top three, or your newest cards if you haven't picked any
+    const grails = cards.data.filter((c) => c.is_grail).sort((a, b) => a.grail_rank - b.grail_rank).map((c) => byId.get(c.id));
+    const top = (grails.length ? grails : [...byId.values()]).slice(0, 3);
+    if (top.length) {
+      top.forEach((k, i) => (P.CARDS[k].grail = i + 1));
+      P.GRAIL_KEYS.splice(0, P.GRAIL_KEYS.length, ...top);
+      S.currentCard = top[0];
+    }
+
+    // Memories
+    if (!mems.error)
+      S.memories = mems.data.map((m) => {
+        const d = m.happened_on ? new Date(m.happened_on + "T00:00:00Z") : null;
+        const card = m.card_tcgdex_id ? cards.data.find((c) => c.tcgdex_id === m.card_tcgdex_id) : null;
+        return {
+          id: keyFor(m.id), prompt: 0, title: m.title, card: card ? card.name : "", day: d ? String(d.getUTCDate()) : "",
+          month: d ? MONTHS[d.getUTCMonth()] : "", year: d ? String(d.getUTCFullYear()) : "",
+          occasion: m.place || "", text: m.note || "",
+        };
+      });
+
+    // Wish list
+    if (!wish.error && window.bdL) {
+      window.bdL.wish = wish.data.map((w) => {
+        const k = keyFor(w.id);
+        addCard(k, { name: w.name, image_url: w.image_url, set_name: "", rarity: "" });
+        return k;
+      });
+    }
+
+    // Points, followers, name
+    if (!pts.error) P.setPoints(pts.data.reduce((n, p) => n + p.points, 0));
+    if (!fers.error) S.followers = fers.count || 0;
+    if (!fing.error) S.following = fing.count || 0;
+    const name = prof.data?.display_name || session.user.email?.split("@")[0] || "";
+    window.bdFirstName = name.split(" ")[0] || "Wing";
+    replaceProfileText(name, prof.data?.username, prof.data?.bio);
+
+    // Redraw with the wireframe's own renderers
+    for (const fn of ["renderMyBinder", "renderJourney", "renderProfile"]) try { P[fn](); } catch {}
+    for (const r of ["collection", "home", "profile", "mori-room"]) try { P.R[r] && P.R[r](); } catch {}
+  }
+  window.bdLive.reload = loadMyData;
+  fresh().then((s) => s && loadMyData());
+  sb.auth.onAuthStateChange((event) => { if (event === "SIGNED_IN") setTimeout(loadMyData, 0); });
+
   // Confirm / Change details on Mori's real proposals.
   app.addEventListener("click", async (e) => {
     const b = e.target.closest("[data-bd-confirm],[data-bd-edit]");
@@ -3434,7 +3546,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       });
       if (!res.ok) throw new Error("failed");
       const out = await res.json();
-      if (action === "confirm") { b.textContent = "Saved"; P.toast("Saved to your collection"); }
+      if (action === "confirm") { b.textContent = "Saved"; P.toast("Saved to your collection"); loadMyData(); }
       const thread = b.closest("[data-mori-thread]");
       if (out.reply && thread) {
         const msg = document.createElement("div");

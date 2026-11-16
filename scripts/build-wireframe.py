@@ -43,6 +43,26 @@ html = html.replace(
 end = html.rfind("</body>")
 html = html[:end] + layers + html[end:] if end != -1 else html + layers
 
+# Small hooks so the live layer can show the signed-in collector's real data in the wireframe's
+# own screens. Each one only exposes existing data or reads a name; none changes any markup or style.
+HOOKS = [
+    ("window.cpProto={go,back,", "window.cpProto={GRAIL_KEYS,go,back,"),
+    ("qsa('[data-greeting]',app).forEach(x=>x.textContent=greeting()+', Wing');",
+     "qsa('[data-greeting]',app).forEach(x=>x.textContent=greeting()+', '+(window.bdFirstName||'Wing'));"),
+    ("  const L = { wish:", "  const L = window.bdL = { wish:"),
+    ("const owned = k => !!binderOf(k);", "const owned = k => !!binderOf(k) || (S.loose || []).includes(k);"),
+    ("const ownedCards = () => [...new Set(S.binders.flatMap(b => b.cards))]",
+     "const ownedCards = () => [...new Set(S.binders.flatMap(b => b.cards).concat(S.loose || []))]"),
+    ("const allOwnedCards = () => [...new Set(S.binders.flatMap(b => b.cards))]",
+     "const allOwnedCards = () => [...new Set(S.binders.flatMap(b => b.cards).concat(S.loose || []))]"),
+    ("'Hi Wing, what shall we do today?'", "'Hi ' + (window.bdFirstName || 'Wing') + ', what shall we do today?'"),
+    ("toast('Welcome back, Wing')", "toast('Welcome back, ' + (window.bdFirstName || 'Wing'))"),
+    ("You are all set, Wing.", "You are all set, ' + (window.bdFirstName || 'Wing') + '."),
+]
+for old, new in HOOKS:
+    assert html.count(old) == 1, f"hook point not found once: {old[:60]}"
+    html = html.replace(old, new, 1)
+
 out = os.path.join(ROOT, "public", "index.html")
 with open(out, "w", encoding="utf-8") as f:
     f.write(html)

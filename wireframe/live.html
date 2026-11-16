@@ -173,6 +173,118 @@
     return true;
   };
 
+  /* ---------------- Your real data in the wireframe's screens ---------------- */
+  // Fills the wireframe's own data (cards, binders, grails, memories, wish list, points,
+  // followers, name) from your account, then asks the wireframe to redraw. No markup changes.
+  const keyFor = (id) => "r" + String(id).replace(/-/g, "").slice(0, 16);
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const COLORS = ["purple", "pink", "blue"];
+
+  function addCard(key, c) {
+    const meta = [c.set_name, c.number && "#" + c.number].filter(Boolean).join(" · ");
+    P.CARDS[key] = {
+      name: c.name, glyph: "✦", meta, type: c.rarity || "", artist: c.illustrator || "Unknown artist",
+      set: c.set_name || "", theme: "", note: "", home: "", img: key,
+      caption: [c.name, c.rarity, [c.set_name, c.number].filter(Boolean).join(" ")].filter(Boolean).join(" · "),
+    };
+    if (c.image_url) P.IMG[key] = c.image_url;
+  }
+
+  function replaceProfileText(name, handle, bio) {
+    const root = app.querySelector('[data-screen="profile"]');
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const n = walker.currentNode;
+      let v = n.nodeValue;
+      if (name) v = v.replace(/Wing Wu/g, name);
+      if (handle) v = v.replace(/wingcollects/g, handle);
+      if (bio) v = v.replace(/Cards, memories and moonlit finds\./g, bio);
+      if (v !== n.nodeValue) n.nodeValue = v;
+    }
+  }
+
+  async function loadMyData() {
+    if (!(await fresh())) return;
+    const uid = session.user.id;
+    const [prof, cards, binders, links, mems, wish, pts, fers, fing] = await Promise.all([
+      sb.from("profiles").select("display_name, username, bio").eq("id", uid).maybeSingle(),
+      sb.from("cards").select("*").eq("user_id", uid).order("created_at", { ascending: false }),
+      sb.from("binders").select("id, name, description, is_public, cover_image").eq("user_id", uid).order("created_at"),
+      sb.from("binder_cards").select("binder_id, card_id, position").eq("user_id", uid).order("position"),
+      sb.from("memories").select("*").eq("user_id", uid).order("happened_on", { ascending: false, nullsFirst: false }),
+      sb.from("wishlist").select("*").eq("user_id", uid).order("created_at", { ascending: false }),
+      sb.from("points_events").select("points").eq("user_id", uid),
+      sb.from("follows").select("follower_id", { count: "exact", head: true }).eq("followee_id", uid),
+      sb.from("follows").select("followee_id", { count: "exact", head: true }).eq("follower_id", uid),
+    ]);
+    if (cards.error || binders.error || links.error) return; // keep what's showing rather than half-fill it
+    const S = P.S;
+
+    // Cards
+    const byId = new Map();
+    for (const c of cards.data) { const k = keyFor(c.id); addCard(k, c); byId.set(c.id, k); }
+
+    // Binders: artwork cover when set, otherwise the wireframe's own colour
+    const inBinder = new Set();
+    S.binders = binders.data.map((b, i) => {
+      const keys = links.data.filter((l) => l.binder_id === b.id).map((l) => byId.get(l.card_id)).filter(Boolean);
+      keys.forEach((k) => inBinder.add(k));
+      return {
+        id: keyFor(b.id), name: b.name, type: b.description || "Binder", privacy: b.is_public ? "Public" : "Private",
+        color: COLORS[i % COLORS.length], cover: b.cover_image ? { type: "img", src: b.cover_image } : null,
+        coverNote: "Binder cover", cards: keys, extra: 0,
+      };
+    });
+    S.loose = [...byId.values()].filter((k) => !inBinder.has(k));
+    if (S.binders[0]) S.currentBinder = S.binders[0].id;
+
+    // Grails: your top three, or your newest cards if you haven't picked any
+    const grails = cards.data.filter((c) => c.is_grail).sort((a, b) => a.grail_rank - b.grail_rank).map((c) => byId.get(c.id));
+    const top = (grails.length ? grails : [...byId.values()]).slice(0, 3);
+    if (top.length) {
+      top.forEach((k, i) => (P.CARDS[k].grail = i + 1));
+      P.GRAIL_KEYS.splice(0, P.GRAIL_KEYS.length, ...top);
+      S.currentCard = top[0];
+    }
+
+    // Memories
+    if (!mems.error)
+      S.memories = mems.data.map((m) => {
+        const d = m.happened_on ? new Date(m.happened_on + "T00:00:00Z") : null;
+        const card = m.card_tcgdex_id ? cards.data.find((c) => c.tcgdex_id === m.card_tcgdex_id) : null;
+        return {
+          id: keyFor(m.id), prompt: 0, title: m.title, card: card ? card.name : "", day: d ? String(d.getUTCDate()) : "",
+          month: d ? MONTHS[d.getUTCMonth()] : "", year: d ? String(d.getUTCFullYear()) : "",
+          occasion: m.place || "", text: m.note || "",
+        };
+      });
+
+    // Wish list
+    if (!wish.error && window.bdL) {
+      window.bdL.wish = wish.data.map((w) => {
+        const k = keyFor(w.id);
+        addCard(k, { name: w.name, image_url: w.image_url, set_name: "", rarity: "" });
+        return k;
+      });
+    }
+
+    // Points, followers, name
+    if (!pts.error) P.setPoints(pts.data.reduce((n, p) => n + p.points, 0));
+    if (!fers.error) S.followers = fers.count || 0;
+    if (!fing.error) S.following = fing.count || 0;
+    const name = prof.data?.display_name || session.user.email?.split("@")[0] || "";
+    window.bdFirstName = name.split(" ")[0] || "Wing";
+    replaceProfileText(name, prof.data?.username, prof.data?.bio);
+
+    // Redraw with the wireframe's own renderers
+    for (const fn of ["renderMyBinder", "renderJourney", "renderProfile"]) try { P[fn](); } catch {}
+    for (const r of ["collection", "home", "profile", "mori-room"]) try { P.R[r] && P.R[r](); } catch {}
+  }
+  window.bdLive.reload = loadMyData;
+  fresh().then((s) => s && loadMyData());
+  sb.auth.onAuthStateChange((event) => { if (event === "SIGNED_IN") setTimeout(loadMyData, 0); });
+
   // Confirm / Change details on Mori's real proposals.
   app.addEventListener("click", async (e) => {
     const b = e.target.closest("[data-bd-confirm],[data-bd-edit]");
@@ -191,7 +303,7 @@
       });
       if (!res.ok) throw new Error("failed");
       const out = await res.json();
-      if (action === "confirm") { b.textContent = "Saved"; P.toast("Saved to your collection"); }
+      if (action === "confirm") { b.textContent = "Saved"; P.toast("Saved to your collection"); loadMyData(); }
       const thread = b.closest("[data-mori-thread]");
       if (out.reply && thread) {
         const msg = document.createElement("div");
