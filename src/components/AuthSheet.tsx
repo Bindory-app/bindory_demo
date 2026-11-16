@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Mori } from "./Mori";
 import { Button } from "@/components/ui/button";
 
+/** Google sign-in needs the Google provider switched on in Supabase; hidden until then. */
+const GOOGLE_ENABLED = import.meta.env["VITE_GOOGLE_SIGNIN"] === "true";
+
 const GoogleG = () => (
   <svg
     aria-hidden="true"
@@ -36,21 +39,27 @@ export function AuthSheet({
   onOpenChange,
   mode = "login",
   onModeChange,
+  notice,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   mode?: "login" | "signup";
   onModeChange?: (mode: "login" | "signup") => void;
+  /** Shown above the form, e.g. when an email link has expired. */
+  notice?: string | undefined;
 }) {
   const [currentMode, setCurrentMode] = useState(mode);
   useEffect(() => {
     setCurrentMode(mode);
     setStatus("idle");
     setError("");
+    setCode("");
   }, [mode, open]);
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   const google = async () => {
     setError("");
@@ -67,17 +76,33 @@ export function AuthSheet({
     if (!email.trim()) return;
     setStatus("sending");
     setError("");
+    // Log in and sign up share one flow: a new email simply becomes a new account.
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: {
-        emailRedirectTo: window.location.origin,
-        shouldCreateUser: currentMode === "signup",
-      },
+      options: { emailRedirectTo: window.location.origin, shouldCreateUser: true },
     });
     if (error) {
       setStatus("error");
-      setError(error.message);
+      setError(
+        /rate|security purposes/i.test(error.message)
+          ? "Too many emails just now. Please wait a minute and try again."
+          : error.message,
+      );
     } else setStatus("sent");
+  };
+
+  // The email carries a one-time code as well as a link. The code works even when a mail
+  // app has already opened (and so used up) the link, or the link opens in another browser.
+  const verify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = code.replace(/\D/g, "");
+    if (token.length < 6) return;
+    setVerifying(true);
+    setError("");
+    const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token, type: "email" });
+    setVerifying(false);
+    if (error) setError("That code didn't work. Check it, or send a new one.");
+    else onOpenChange(false);
   };
 
   return (
@@ -91,28 +116,67 @@ export function AuthSheet({
               : "Create an account so Mori can remember your cards and stories."}
           </DrawerTitle>
           <DrawerDescription className="sr-only">
-            {currentMode === "login" ? "Log in" : "Sign up"} with Google or an email link
+            {currentMode === "login" ? "Log in" : "Sign up"} with a code sent to your email
           </DrawerDescription>
         </div>
-        {status === "sent" ? (
-          <p className="mt-6 rounded-2xl bg-accent p-4 text-center text-sm font-semibold text-accent-foreground">
-            Check {email} for your sign-in link.
+        {notice && status !== "sent" && (
+          <p className="mt-4 rounded-2xl bg-secondary p-3 text-center text-sm font-semibold">
+            {notice}
           </p>
-        ) : (
-          <div className="mt-5 space-y-3">
+        )}
+        {status === "sent" ? (
+          <form onSubmit={verify} className="mt-5 space-y-3">
+            <p className="text-center text-sm">
+              We emailed <b>{email}</b>. Enter the code from the email, or tap its link on this
+              device.
+            </p>
+            <input
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              placeholder="123456"
+              aria-label="Code from the email"
+              className="h-14 w-full rounded-full border border-border bg-background px-4 text-center text-2xl font-bold tracking-[0.3em] outline-none focus:ring-2 focus:ring-ring"
+            />
+            <Button
+              type="submit"
+              disabled={verifying || code.length < 6}
+              className="h-12 w-full rounded-full bg-brand text-sm font-bold text-primary-foreground disabled:opacity-60"
+            >
+              {verifying ? "Checking…" : "Continue"}
+            </Button>
             <button
               type="button"
-              onClick={google}
-              className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-[#747775] bg-[#FFFFFF] px-3 text-sm font-medium text-[#1F1F1F] dark:border-[#8E918F] dark:bg-[#131314] dark:text-[#E3E3E3]"
+              onClick={() => {
+                setStatus("idle");
+                setCode("");
+                setError("");
+              }}
+              className="w-full text-center text-sm font-bold text-primary"
             >
-              <GoogleG />
-              Continue with Google
+              Use a different email or send a new code
             </button>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="h-px flex-1 bg-border" />
-              or
-              <span className="h-px flex-1 bg-border" />
-            </div>
+          </form>
+        ) : (
+          <div className="mt-5 space-y-3">
+            {GOOGLE_ENABLED && (
+              <>
+                <button
+                  type="button"
+                  onClick={google}
+                  className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-[#747775] bg-[#FFFFFF] px-3 text-sm font-medium text-[#1F1F1F] dark:border-[#8E918F] dark:bg-[#131314] dark:text-[#E3E3E3]"
+                >
+                  <GoogleG />
+                  Continue with Google
+                </button>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" />
+                  or
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+              </>
+            )}
             <form onSubmit={magic} className="space-y-3">
               <input
                 type="email"
@@ -131,8 +195,8 @@ export function AuthSheet({
                 {status === "sending"
                   ? "Sending…"
                   : currentMode === "login"
-                    ? "Email me a log-in link"
-                    : "Email me a sign-up link"}
+                    ? "Email me a log-in code"
+                    : "Email me a sign-up code"}
               </Button>
             </form>
           </div>

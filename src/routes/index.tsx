@@ -82,6 +82,20 @@ function GuestAskMori() {
   const navigate = useNavigate();
   const [sheet, setSheet] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authNotice, setAuthNotice] = useState<string | undefined>(undefined);
+  // An email link that was already used or has expired comes back as #error=... in the URL.
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    if (!hash.get("error_code") && !hash.get("error")) return;
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    setAuthNotice(
+      hash.get("error_code") === "otp_expired"
+        ? "That email link has expired or was already used. Send a new code below."
+        : "That sign-in link didn't work. Send a new code below.",
+    );
+    setAuthMode("login");
+    setSheet(true);
+  }, []);
   const [profileRetry, setProfileRetry] = useState(0);
   const [phase, setPhase] = useState<Phase>("guest");
   const [step, setStep] = useState(0);
@@ -570,6 +584,7 @@ function GuestAskMori() {
           onOpenChange={setSheet}
           mode={authMode}
           onModeChange={setAuthMode}
+          notice={authNotice}
         />
       </div>
     </div>
