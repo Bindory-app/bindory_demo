@@ -499,6 +499,8 @@ export type Database = {
       binder_is_saveable: { Args: { p_binder: string }; Returns: boolean }
       delete_my_account: { Args: never; Returns: undefined }
       load_demo_collection: { Args: { p_profile?: boolean }; Returns: Json }
+      list_public_collectors: { Args: { p_query?: string }; Returns: Json }
+      read_public_profile: { Args: { p_username: string }; Returns: Json }
       confirm_binder_preview: {
         Args: { p_message: string; p_name: string; p_publish?: boolean }
         Returns: Json

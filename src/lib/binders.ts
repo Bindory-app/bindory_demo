@@ -15,6 +15,10 @@ export type BinderDetail = {
   cover_image?: string | null;
   /** Owner display name, on the public page only. */
   owner?: string | null;
+  owner_username?: string | null;
+  owner_avatar?: string | null;
+  owner_bio?: string | null;
+  is_mine?: boolean;
   cards: BinderCard[];
 };
 

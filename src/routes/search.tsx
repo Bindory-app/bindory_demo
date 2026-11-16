@@ -3,6 +3,7 @@ import { Search as SearchIcon, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppShell, Panel } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
+import { listCollectors, type PublicCollector } from "@/lib/collectors";
 
 export const Route = createFileRoute("/search")({
   head: () => ({
@@ -30,13 +31,24 @@ type PublicBinder = {
   owner?: string | null;
   count: number;
 };
-// Collectors only appear once public collector profiles exist; we never invent them.
-const collectors: { id: string; name: string; reason: string }[] = [];
 
 function SearchPage() {
   const [q, setQ] = useState("");
   const [binders, setBinders] = useState<PublicBinder[] | null>(null);
   const [error, setError] = useState(false);
+  const [collectors, setCollectors] = useState<PublicCollector[]>([]);
+  useEffect(() => {
+    let active = true;
+    const t = setTimeout(() => {
+      listCollectors(q.trim())
+        .then((c) => active && setCollectors(c))
+        .catch(() => active && setCollectors([]));
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(t);
+    };
+  }, [q]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -67,15 +79,38 @@ function SearchPage() {
       <h2 className="mb-3 mt-6 text-lg font-bold">Collectors to explore</h2>
       {collectors.length === 0 ? (
         <Panel className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Users className="h-5 w-5 shrink-0" />I could not find any collectors to suggest yet.
+          <Users className="h-5 w-5 shrink-0" />
+          {q.trim()
+            ? `No collectors match “${q.trim()}”.`
+            : "I could not find any collectors to suggest yet."}
         </Panel>
       ) : (
-        <div className="space-y-2">
+        <div className="-mx-5 flex gap-4 overflow-x-auto px-5 pb-1">
           {collectors.map((c) => (
-            <Panel key={c.id}>
-              <p className="font-bold">{c.name}</p>
-              <p className="text-sm text-muted-foreground">{c.reason}</p>
-            </Panel>
+            <Link
+              key={c.id}
+              to="/c/$username"
+              params={{ username: c.username }}
+              className="w-[68px] shrink-0 text-center"
+            >
+              <span className="block h-[68px] w-[68px] overflow-hidden rounded-full border-2 border-secondary bg-secondary">
+                {c.avatar_url ? (
+                  <img
+                    src={c.avatar_url}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="grid h-full w-full place-items-center text-xl font-bold text-primary">
+                    {(c.display_name || c.username).slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+              </span>
+              <span className="mt-1 block truncate text-xs">
+                {(c.display_name || c.username).split(" ")[0]}
+              </span>
+            </Link>
           ))}
         </div>
       )}

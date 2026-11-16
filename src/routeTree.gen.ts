@@ -22,6 +22,7 @@ import { Route as TrendingBindersRouteImport } from './routes/trending-binders'
 import { Route as ApiMoriChatRouteImport } from './routes/api/mori-chat'
 import { Route as BIdRouteImport } from './routes/b.$id'
 import { Route as BindersIdRouteImport } from './routes/binders.$id'
+import { Route as CUsernameRouteImport } from './routes/c.$username'
 import { Route as EventsAnniversaryRouteImport } from './routes/events.anniversary'
 
 const IndexRoute = IndexRouteImport.update({
@@ -89,6 +90,11 @@ const BindersIdRoute = BindersIdRouteImport.update({
   path: '/binders/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CUsernameRoute = CUsernameRouteImport.update({
+  id: '/c/$username',
+  path: '/c/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventsAnniversaryRoute = EventsAnniversaryRouteImport.update({
   id: '/events/anniversary',
   path: '/events/anniversary',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/api/mori-chat': typeof ApiMoriChatRoute
   '/b/$id': typeof BIdRoute
   '/binders/$id': typeof BindersIdRoute
+  '/c/$username': typeof CUsernameRoute
   '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRoutesByTo {
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/api/mori-chat': typeof ApiMoriChatRoute
   '/b/$id': typeof BIdRoute
   '/binders/$id': typeof BindersIdRoute
+  '/c/$username': typeof CUsernameRoute
   '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRoutesById {
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/api/mori-chat': typeof ApiMoriChatRoute
   '/b/$id': typeof BIdRoute
   '/binders/$id': typeof BindersIdRoute
+  '/c/$username': typeof CUsernameRoute
   '/events/anniversary': typeof EventsAnniversaryRoute
 }
 export interface FileRouteTypes {
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/api/mori-chat'
     | '/b/$id'
     | '/binders/$id'
+    | '/c/$username'
     | '/events/anniversary'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/api/mori-chat'
     | '/b/$id'
     | '/binders/$id'
+    | '/c/$username'
     | '/events/anniversary'
   id:
     | '__root__'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/api/mori-chat'
     | '/b/$id'
     | '/binders/$id'
+    | '/c/$username'
     | '/events/anniversary'
   fileRoutesById: FileRoutesById
 }
@@ -209,6 +221,7 @@ export interface RootRouteChildren {
   ApiMoriChatRoute: typeof ApiMoriChatRoute
   BIdRoute: typeof BIdRoute
   BindersIdRoute: typeof BindersIdRoute
+  CUsernameRoute: typeof CUsernameRoute
   EventsAnniversaryRoute: typeof EventsAnniversaryRoute
 }
 
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BindersIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/c/$username': {
+      id: '/c/$username'
+      path: '/c/$username'
+      fullPath: '/c/$username'
+      preLoaderRoute: typeof CUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events/anniversary': {
       id: '/events/anniversary'
       path: '/events/anniversary'
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMoriChatRoute: ApiMoriChatRoute,
   BIdRoute: BIdRoute,
   BindersIdRoute: BindersIdRoute,
+  CUsernameRoute: CUsernameRoute,
   EventsAnniversaryRoute: EventsAnniversaryRoute,
 }
 export const routeTree = rootRouteImport
