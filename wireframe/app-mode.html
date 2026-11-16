@@ -1,0 +1,17 @@
+<!-- Bindory demo: show the wireframe app full screen (no side text, no drawn phone frame).
+     Everything inside the app is the wireframe's own markup, styles and script, unchanged. -->
+<style id="bd-app-mode">
+  html, body { margin: 0 !important; padding: 0 !important; height: 100%; }
+  body.bd-app { background: #f6f5fc; overflow: hidden; }
+  body.bd-app #clickable-prototype { padding: 0 !important; min-height: 100dvh; background: #f6f5fc !important; }
+  body.bd-app #clickable-prototype .cp-intro,
+  body.bd-app #clickable-prototype .cp-status { display: none !important; }
+  body.bd-app #clickable-prototype .cp-shell { display: block !important; padding: 0 !important; margin: 0 auto !important; max-width: 480px !important; min-height: 100dvh; gap: 0 !important; }
+  body.bd-app #clickable-prototype .cp-phone { width: 100% !important; max-width: 480px !important; height: 100dvh !important; margin: 0 auto !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: transparent !important; }
+  body.bd-app #clickable-prototype .cp-phone::before, body.bd-app #clickable-prototype .cp-phone::after { display: none !important; }
+  body.bd-app #clickable-prototype .cp-app { height: 100dvh !important; width: 100% !important; border-radius: 0 !important; }
+  @media (prefers-color-scheme: dark) {
+    body.bd-app, body.bd-app #clickable-prototype { background: #171426 !important; }
+  }
+</style>
+<script>document.body.classList.add("bd-app");</script>
