@@ -76,8 +76,8 @@ export const GATE_PAGE = `<!doctype html>
 <main>
   <img src="/mori-hd.png" alt="Mori">
   <p class="kicker">Private demo</p>
-  <h1>Bindory</h1>
-  <p class="lead">This preview is invite-only. Enter your email and the invite code you were given.</p>
+  <h1>Mori</h1>
+  <p class="lead">This preview is invite-only.<br>Enter your email and the invite code you were given.</p>
   <form id="gate" novalidate>
     <label for="email">Email</label>
     <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required>
