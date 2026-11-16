@@ -2469,6 +2469,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   }
 
   async function route(text, attached) {
+    if (window.bdLiveRoute && !M.pending && !attached && await window.bdLiveRoute(text, { addMsg, say, scrollDown })) return;
     const t = text.toLowerCase();
     if (M.pending === 'onboard') return onboardAnswer(text);
     if (M.pending === 'memory-details') return memoryDetails(text, attached);
@@ -3239,4 +3240,215 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   }
 </style>
 <script>document.body.classList.add("bd-app");</script>
+
+<!-- Bindory demo: connect the wireframe to the real backend, without changing how it looks.
+     - Its Log in / Sign up sheet signs in for real (Supabase: Google, or a 6-digit email code),
+       then hands back to the wireframe's own flow (onboarding for sign up, welcome back for log in).
+     - When you're signed in, what you type to Ask Mori goes to the real Mori agent (/api/mori-chat),
+       and replies are drawn with the wireframe's own chat bubbles and confirmation card.
+     Everything else is the wireframe's own markup, styles and script. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
+<script>
+(() => {
+  const P = window.cpProto;
+  const app = document.getElementById("cp-app");
+  if (!P || !app || !window.supabase) return;
+
+  const sb = window.supabase.createClient(
+    "https://auiwcpwphlzipfuzdoan.supabase.co",
+    "sb_publishable_VxXGcKFvZiQVbWExEnDw5g_C-3H-K1q",
+    { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit" } },
+  );
+  let session = null;
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const fresh = async () => (session = (await sb.auth.getSession()).data.session);
+  window.bdLive = { sb, signedIn: () => !!session };
+
+  /* ---------------- Sign-in ---------------- */
+  let passThrough = false;
+  sb.auth.onAuthStateChange((_event, s) => { session = s; });
+  // An email link that was already used comes back as #error=...; offer a fresh code instead.
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const linkFailed = hash.get("error_code") || hash.get("error");
+  fresh().then((s) => {
+    if (s) P.open("mori"); // signed in: skip the guest screen, as the wireframe does after sign-in
+    else if (linkFailed) {
+      history.replaceState(null, "", location.pathname);
+      P.toast("That sign-in link expired. Tap Log in for a new code.");
+    }
+  });
+
+  document.addEventListener("click", async (e) => {
+    const verify = e.target.closest("[data-bd-verify]");
+    const back = e.target.closest("[data-bd-back]");
+    if (verify || back) {
+      e.stopImmediatePropagation(); e.preventDefault();
+      const card = (verify || back).closest(".cp-auth-card");
+      if (back) return restoreSheet(card);
+      const email = card.dataset.bdEmail;
+      const code = (card.querySelector("[data-bd-code]").value || "").replace(/\D/g, "");
+      if (code.length < 6) return P.toast("Enter the code from the email");
+      verify.disabled = true; verify.textContent = "Checking…";
+      const { error } = await sb.auth.verifyOtp({ email, token: code, type: "email" });
+      verify.disabled = false; verify.textContent = "Continue";
+      if (error) return P.toast("That code didn't work. Check it, or send a new one.");
+      await fresh();
+      const original = card.querySelector('[data-auth-provider="email"]');
+      restoreSheet(card);
+      passThrough = true; original.click(); // the wireframe's own sign-up / log-in flow continues
+      return;
+    }
+
+    const btn = e.target.closest("[data-auth-provider]");
+    if (!btn || !app.contains(btn)) return;
+    if (passThrough) { passThrough = false; return; }
+    const card = btn.closest(".cp-auth-card");
+    if (btn.dataset.authProvider === "Google") {
+      e.stopImmediatePropagation(); e.preventDefault();
+      await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + "/" } });
+      return;
+    }
+    const email = (card.querySelector("[data-auth-email]").value || "").trim();
+    if (!email) return; // the wireframe asks for an email itself
+    e.stopImmediatePropagation(); e.preventDefault();
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = "Sending your code…";
+    const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: location.origin + "/" } });
+    btn.disabled = false; btn.textContent = label;
+    if (error) return P.toast(/rate|security/i.test(error.message) ? "Too many emails just now. Try again in a minute." : "Could not send the code. Please try again.");
+    showCodeStep(card, email);
+  }, true);
+
+  function showCodeStep(card, email) {
+    card.dataset.bdEmail = email;
+    [...card.children].forEach((el) => { if (!el.matches(".cp-auth-close, .cp-mori-face")) { el.dataset.bdHidden = ""; el.hidden = true; } });
+    const step = document.createElement("div");
+    step.dataset.bdCodeStep = "";
+    step.innerHTML =
+      "<b>Check your email</b><small>We sent a 6-digit code to " + esc(email) + ".</small>" +
+      '<input class="cp-auth-email-input" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="6-digit code" aria-label="Code from the email" data-bd-code>' +
+      '<button class="cp-auth-email" type="button" data-bd-verify>Continue</button>' +
+      '<button class="cp-auth-switch" type="button" data-bd-back>Use a different email</button>';
+    step.style.display = "contents";
+    card.append(step);
+    step.querySelector("[data-bd-code]").focus();
+  }
+  function restoreSheet(card) {
+    card.querySelector("[data-bd-code-step]")?.remove();
+    card.querySelectorAll("[data-bd-hidden]").forEach((el) => { el.hidden = false; delete el.dataset.bdHidden; });
+  }
+
+  /* ---------------- Ask Mori ---------------- */
+  // Mori's text may use **bold** and [label](link); show it as plain wireframe text.
+  const fmt = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/\n/g, "<br>");
+  const row = (k, v, muted) => "<li><small>" + esc(k) + "</small><b" + (muted ? ' class="is-muted"' : "") + ">" + esc(v) + "</b></li>";
+  const cardImg = (c) => (c && /^https:\/\/assets\.tcgdex\.net\//.test(c.image || "") ? c.image : "");
+
+  function proposalHTML(p, id) {
+    const done = p.status !== "pending";
+    let head = "", rows = "", art = "";
+    if (p.tool === "add_card_to_collection" || p.tool === "add_to_wishlist") {
+      head = "<small>" + (p.tool === "add_to_wishlist" ? "Wish list" : "New card") + "</small><b>" + esc(p.card.name) + "</b>";
+      art = cardImg(p.card) ? '<div class="cp-mori-ident"><img src="' + esc(cardImg(p.card)) + '" alt=""><div><small>Catalogue result</small><b>' + esc(p.card.name) + "</b><span>" + esc(p.card.set_name || "") + "</span></div></div>" : "";
+      rows = row("Card", p.card.name) + row("Set", p.card.set_name || "Not listed", !p.card.set_name) + (p.card.reason ? row("Why", p.card.reason) : "") + (p.note ? row("Note", p.note) : "");
+    } else if (p.tool === "create_binder") {
+      head = "<small>New binder · Private</small><b>" + esc(p.name) + "</b>";
+      art = '<div style="display:flex;gap:6px;overflow-x:auto;margin:8px 0">' + (p.cards || []).map((c) => (cardImg(c) ? '<img src="' + esc(cardImg(c)) + '" alt="' + esc(c.name) + '" style="height:84px;border-radius:6px">' : "")).join("") + "</div>";
+      rows = row("Cards", String((p.cards || []).length)) + (p.description ? row("About", p.description) : "");
+    } else if (p.tool === "save_memory") {
+      head = "<small>New memory · Private</small><b>" + esc(p.title) + "</b>";
+      rows = row("Story", p.story) + row("With", p.with_whom || "Not added", !p.with_whom) + row("Where", p.place || "Not added", !p.place) + row("When", p.date || "Not added", !p.date) + (p.card ? row("Card", p.card.name) : "");
+    }
+    return '<p>Here it is. Nothing is saved until you confirm.</p>' + art +
+      '<div class="cp-mori-confirm"><div class="cp-mori-confirm-head">' + head + "</div><ul>" + rows + "</ul>" +
+      '<div class="cp-mori-actions"><button class="cp-mori-go" data-bd-confirm="' + id + '"' + (done ? " disabled" : "") + ">" + (p.status === "confirmed" ? "Saved" : "Confirm") + '</button><button data-bd-edit="' + id + '"' + (done ? " disabled" : "") + ">Change details</button></div></div>";
+  }
+
+  function renderRows(rows, ui, steps) {
+    let stepsHTML = steps.length ? '<ul class="cp-mori-steps">' + steps.map((s) => '<li class="is-done"><i></i><span>' + esc(s) + "</span></li>").join("") + "</ul>" : "";
+    for (const r of rows) {
+      if (r.role !== "mori" || r.kind === "status") continue;
+      if (r.kind === "confirm" && r.payload) ui.say(stepsHTML + proposalHTML(r.payload, r.id));
+      else ui.say(stepsHTML + "<p>" + fmt(r.content) + "</p>");
+      stepsHTML = "";
+    }
+  }
+
+  // Called from the wireframe's own route() (patched at build time) for free-typed messages.
+  window.bdLiveRoute = async (text, ui) => {
+    if (!(await fresh())) return false; // guests keep the wireframe's scripted Mori
+    // Making videos, story cards, recaps and covers is the wireframe's own Studio flow.
+    if (/\b(video|studio|story card|recap|cover)\b/i.test(text)) return false;
+    const typing = ui.addMsg("mori", '<div class="cp-mori-typing"><i></i><i></i><i></i><span>Thinking</span></div>', "is-typing");
+    const steps = [];
+    let bubble = null, streamed = "";
+    try {
+      const res = await fetch("/api/mori-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
+        body: JSON.stringify({ message: text }),
+      });
+      if (!res.ok || !res.body) throw new Error("unavailable");
+      const reader = res.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n"); buf = lines.pop() || "";
+        for (const line of lines) {
+          if (!line) continue;
+          const ev = JSON.parse(line);
+          if (ev.type === "status") { steps.push(ev.text); typing.querySelector("span").textContent = ev.text; }
+          if (ev.type === "text") {
+            if (!bubble) { bubble = ui.say("<p></p>"); typing.after(bubble); }
+            streamed += ev.text; bubble.querySelector("p").innerHTML = fmt(streamed); ui.scrollDown();
+          }
+          if (ev.type === "error") throw new Error(ev.text);
+          if (ev.type === "done") { typing.remove(); bubble?.remove(); bubble = null; renderRows(ev.rows, ui, steps); }
+        }
+      }
+    } catch {
+      typing.remove(); bubble?.remove();
+      ui.say("<p>Sorry, I could not answer just now. Please try again.</p>");
+    }
+    typing.remove();
+    return true;
+  };
+
+  // Confirm / Change details on Mori's real proposals.
+  app.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-bd-confirm],[data-bd-edit]");
+    if (!b) return;
+    e.stopPropagation();
+    const action = "bdConfirm" in b.dataset ? "confirm" : "edit";
+    const id = b.dataset.bdConfirm || b.dataset.bdEdit;
+    const box = b.closest(".cp-mori-actions");
+    box.querySelectorAll("button").forEach((x) => (x.disabled = true));
+    try {
+      await fresh();
+      const res = await fetch("/api/mori-confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
+        body: JSON.stringify({ messageId: id, action }),
+      });
+      if (!res.ok) throw new Error("failed");
+      const out = await res.json();
+      if (action === "confirm") { b.textContent = "Saved"; P.toast("Saved to your collection"); }
+      const thread = b.closest("[data-mori-thread]");
+      if (out.reply && thread) {
+        const msg = document.createElement("div");
+        msg.className = "cp-mori-msg cp-mori-mori";
+        const faceEl = thread.querySelector(".cp-mori-mori .cp-mori-face");
+        msg.innerHTML = (faceEl ? faceEl.outerHTML : "") + '<div class="cp-mori-body"><p>' + fmt(out.reply.content) + "</p></div>";
+        thread.append(msg);
+        msg.scrollIntoView({ block: "end", behavior: "smooth" });
+      }
+    } catch {
+      box.querySelectorAll("button").forEach((x) => (x.disabled = false));
+      P.toast("Could not save that. Please try again.");
+    }
+  });
+})();
+</script>
 

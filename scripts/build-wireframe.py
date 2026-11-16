@@ -28,6 +28,18 @@ for name in ("app-mode.html", "live.html"):
         layers += open(path, encoding="utf-8").read() + "\n"
 
 html = html.replace("<title>Bindory</title>", "<title>Bindory · Ask Mori</title>", 1)
+
+# One hook so the live layer can answer free-typed messages with the real Mori when signed in.
+# Scripted states (onboarding, memory follow-ups, renaming) and attached photos stay with the wireframe.
+ROUTE = "  async function route(text, attached) {\n"
+assert html.count(ROUTE) == 1, "wireframe chat route() not found: update the hook in build-wireframe.py"
+html = html.replace(
+    ROUTE,
+    ROUTE
+    + "    if (window.bdLiveRoute && !M.pending && !attached && await window.bdLiveRoute(text, "
+    + "{ addMsg, say, scrollDown })) return;\n",
+    1,
+)
 end = html.rfind("</body>")
 html = html[:end] + layers + html[end:] if end != -1 else html + layers
 
