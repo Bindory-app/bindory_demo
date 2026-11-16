@@ -33,6 +33,7 @@ type PublicBinder = {
   id: string;
   name: string;
   cover_card_id: string | null;
+  cover_image?: string | null;
   cards: { id: string; image_url: string | null }[];
 };
 const isPublicBinder = (v: Json): v is PublicBinder & Json =>
@@ -80,8 +81,9 @@ export async function loadProfileData(uid: string): Promise<ProfileData> {
     const r = await supabase.rpc("read_public_binder" as never, { p_id: s.binder_id } as never);
     const b = r.data as Json | null;
     if (!r.error && b && isPublicBinder(b)) {
-      const cover =
+      const card =
         b.cards.find((c) => c.id === b.cover_card_id)?.image_url ?? b.cards[0]?.image_url ?? null;
+      const cover = b.cover_image?.startsWith("/demo/") ? b.cover_image : card;
       savedBinders.push({ id: b.id, name: b.name, cover, count: b.cards.length });
     }
   }
