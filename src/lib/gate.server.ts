@@ -77,12 +77,12 @@ export const GATE_PAGE = `<!doctype html>
   <img src="/mori-hd.png" alt="Mori">
   <p class="kicker">Private demo</p>
   <h1>Bindory</h1>
-  <p class="lead">This preview is invite-only. Enter your email and the password you were given.</p>
+  <p class="lead">This preview is invite-only. Enter your email and the invite code you were given.</p>
   <form id="gate" novalidate>
     <label for="email">Email</label>
     <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required>
-    <label for="password">Password</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <label for="password">Invite code</label>
+    <input id="password" name="password" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" required>
     <button type="submit">Enter the demo</button>
     <p class="error" id="error" role="alert"></p>
   </form>
@@ -95,12 +95,12 @@ export const GATE_PAGE = `<!doctype html>
     err.textContent = "";
     const email = form.email.value.trim(), password = form.password.value;
     if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) { err.textContent = "Please enter a valid email."; return; }
-    if (!password) { err.textContent = "Please enter the password."; return; }
+    if (!password) { err.textContent = "Please enter your invite code."; return; }
     btn.disabled = true; btn.textContent = "Checking…";
     try {
       const res = await fetch("/api/gate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
       if (res.ok) { location.reload(); return; }
-      err.textContent = res.status === 401 ? "That password isn't right." : "Something went wrong. Please try again.";
+      err.textContent = res.status === 401 ? "That invite code isn't right." : "Something went wrong. Please try again.";
     } catch { err.textContent = "Something went wrong. Please try again."; }
     btn.disabled = false; btn.textContent = "Enter the demo";
   });
