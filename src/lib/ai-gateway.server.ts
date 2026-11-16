@@ -133,8 +133,12 @@ export async function streamResponse(
   payload: ResponsesRequest,
   options: { signal?: AbortSignal; oidcToken?: string | null } = {},
 ): Promise<AsyncIterable<ResponsesStreamEvent>> {
-  const key =
-    options.oidcToken || process.env["VERCEL_OIDC_TOKEN"] || process.env["AI_GATEWAY_API_KEY"];
+  const sources: [string, string | null | undefined][] = [
+    ["request OIDC token", options.oidcToken],
+    ["VERCEL_OIDC_TOKEN", process.env["VERCEL_OIDC_TOKEN"]],
+    ["AI_GATEWAY_API_KEY", process.env["AI_GATEWAY_API_KEY"]],
+  ];
+  const [source, key] = sources.find(([, v]) => !!v) ?? ["none", undefined];
   if (!key)
     throw new GatewayError("not_configured", "No AI Gateway credential (OIDC token or API key)");
   const res = await fetch(GATEWAY_URL, {
@@ -146,6 +150,12 @@ export async function streamResponse(
   const requestId = res.headers.get("x-vercel-id") ?? undefined;
   if (!res.ok || !res.body) {
     const detail = await res.text().catch(() => "");
+    // Names the credential source only, never its value.
+    console.error("AI Gateway rejected request", {
+      status: res.status,
+      credential: source,
+      detail: detail.slice(0, 300),
+    });
     throw new GatewayError(
       codeForStatus(res.status),
       `Gateway request failed (${res.status}): ${detail.slice(0, 300)}`,
