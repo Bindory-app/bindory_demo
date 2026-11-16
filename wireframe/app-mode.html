@@ -1,4 +1,6 @@
 <!-- Bindory demo: show the wireframe app full screen (no side text, no drawn phone frame).
+     The wireframe's app is designed 318px wide inside its phone frame. To keep its exact proportions
+     on any phone, the app keeps that 318px layout and is scaled up as a whole to fill the screen width.
      Everything inside the app is the wireframe's own markup, styles and script, unchanged. -->
 <style id="bd-app-mode">
   html, body { margin: 0 !important; padding: 0 !important; height: 100%; }
@@ -6,12 +8,38 @@
   body.bd-app #clickable-prototype { padding: 0 !important; min-height: 100dvh; background: #f6f5fc !important; }
   body.bd-app #clickable-prototype .cp-intro,
   body.bd-app #clickable-prototype .cp-status { display: none !important; }
-  body.bd-app #clickable-prototype .cp-shell { display: block !important; padding: 0 !important; margin: 0 auto !important; max-width: 480px !important; min-height: 100dvh; gap: 0 !important; }
-  body.bd-app #clickable-prototype .cp-phone { width: 100% !important; max-width: 480px !important; height: 100dvh !important; margin: 0 auto !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: transparent !important; }
+  body.bd-app #clickable-prototype .cp-shell { display: flex !important; justify-content: center; padding: 0 !important; margin: 0 !important; max-width: none !important; min-height: 100dvh; gap: 0 !important; }
+  body.bd-app #clickable-prototype .cp-phone {
+    width: 318px !important; max-width: none !important; min-width: 0 !important; height: auto !important;
+    margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important;
+    box-shadow: none !important; background: transparent !important; zoom: var(--bd-zoom, 1);
+  }
   body.bd-app #clickable-prototype .cp-phone::before, body.bd-app #clickable-prototype .cp-phone::after { display: none !important; }
-  body.bd-app #clickable-prototype .cp-app { height: 100dvh !important; width: 100% !important; border-radius: 0 !important; }
+  body.bd-app #clickable-prototype .cp-app { width: 318px !important; height: var(--bd-height, 594px) !important; border-radius: 0 !important; }
+  /* The wireframe sizes Search's binder list for its 594px-tall phone; give it the extra height of a taller screen. */
+  body.bd-app #clickable-prototype [data-screen="explore"] .cp-binder-feed { max-height: calc(255px + var(--bd-extra, 0px)) !important; }
   @media (prefers-color-scheme: dark) {
     body.bd-app, body.bd-app #clickable-prototype { background: #171426 !important; }
   }
 </style>
-<script>document.body.classList.add("bd-app");</script>
+<script>
+  (() => {
+    document.body.classList.add("bd-app");
+    // Same 318px layout as the wireframe, scaled to the screen (capped so desktops show a phone-sized app).
+    const fit = () => {
+      const zoom = Math.min(window.innerWidth, 430) / 318;
+      const root = document.documentElement.style;
+      root.setProperty("--bd-zoom", String(zoom));
+      root.setProperty("--bd-height", window.innerHeight / zoom + "px");
+      root.setProperty("--bd-extra", Math.max(0, window.innerHeight / zoom - 594) + "px");
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    // Bindory's icon (versioned so browsers drop the old cached one).
+    for (const [rel, href] of [["icon", "/favicon.ico?v=bindory2"], ["apple-touch-icon", "/apple-touch-icon.png?v=bindory2"]]) {
+      const link = document.createElement("link");
+      link.rel = rel; link.href = href;
+      document.head.append(link);
+    }
+  })();
+</script>

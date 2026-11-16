@@ -3225,6 +3225,8 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 })();
 </script>
 <!-- Bindory demo: show the wireframe app full screen (no side text, no drawn phone frame).
+     The wireframe's app is designed 318px wide inside its phone frame. To keep its exact proportions
+     on any phone, the app keeps that 318px layout and is scaled up as a whole to fill the screen width.
      Everything inside the app is the wireframe's own markup, styles and script, unchanged. -->
 <style id="bd-app-mode">
   html, body { margin: 0 !important; padding: 0 !important; height: 100%; }
@@ -3232,15 +3234,41 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   body.bd-app #clickable-prototype { padding: 0 !important; min-height: 100dvh; background: #f6f5fc !important; }
   body.bd-app #clickable-prototype .cp-intro,
   body.bd-app #clickable-prototype .cp-status { display: none !important; }
-  body.bd-app #clickable-prototype .cp-shell { display: block !important; padding: 0 !important; margin: 0 auto !important; max-width: 480px !important; min-height: 100dvh; gap: 0 !important; }
-  body.bd-app #clickable-prototype .cp-phone { width: 100% !important; max-width: 480px !important; height: 100dvh !important; margin: 0 auto !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: transparent !important; }
+  body.bd-app #clickable-prototype .cp-shell { display: flex !important; justify-content: center; padding: 0 !important; margin: 0 !important; max-width: none !important; min-height: 100dvh; gap: 0 !important; }
+  body.bd-app #clickable-prototype .cp-phone {
+    width: 318px !important; max-width: none !important; min-width: 0 !important; height: auto !important;
+    margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important;
+    box-shadow: none !important; background: transparent !important; zoom: var(--bd-zoom, 1);
+  }
   body.bd-app #clickable-prototype .cp-phone::before, body.bd-app #clickable-prototype .cp-phone::after { display: none !important; }
-  body.bd-app #clickable-prototype .cp-app { height: 100dvh !important; width: 100% !important; border-radius: 0 !important; }
+  body.bd-app #clickable-prototype .cp-app { width: 318px !important; height: var(--bd-height, 594px) !important; border-radius: 0 !important; }
+  /* The wireframe sizes Search's binder list for its 594px-tall phone; give it the extra height of a taller screen. */
+  body.bd-app #clickable-prototype [data-screen="explore"] .cp-binder-feed { max-height: calc(255px + var(--bd-extra, 0px)) !important; }
   @media (prefers-color-scheme: dark) {
     body.bd-app, body.bd-app #clickable-prototype { background: #171426 !important; }
   }
 </style>
-<script>document.body.classList.add("bd-app");</script>
+<script>
+  (() => {
+    document.body.classList.add("bd-app");
+    // Same 318px layout as the wireframe, scaled to the screen (capped so desktops show a phone-sized app).
+    const fit = () => {
+      const zoom = Math.min(window.innerWidth, 430) / 318;
+      const root = document.documentElement.style;
+      root.setProperty("--bd-zoom", String(zoom));
+      root.setProperty("--bd-height", window.innerHeight / zoom + "px");
+      root.setProperty("--bd-extra", Math.max(0, window.innerHeight / zoom - 594) + "px");
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    // Bindory's icon (versioned so browsers drop the old cached one).
+    for (const [rel, href] of [["icon", "/favicon.ico?v=bindory2"], ["apple-touch-icon", "/apple-touch-icon.png?v=bindory2"]]) {
+      const link = document.createElement("link");
+      link.rel = rel; link.href = href;
+      document.head.append(link);
+    }
+  })();
+</script>
 
 <!-- Bindory demo: connect the wireframe to the real backend, without changing how it looks.
      - Its Log in / Sign up sheet signs in for real (Supabase: Google, or a 6-digit email code),
@@ -3417,12 +3445,24 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     return true;
   };
 
-  /* ---------------- Your real data in the wireframe's screens ---------------- */
-  // Fills the wireframe's own data (cards, binders, grails, memories, wish list, points,
-  // followers, name) from your account, then asks the wireframe to redraw. No markup changes.
+  /* ---------------- The wireframe's demo, plus your own activity ---------------- */
+  // The wireframe's sample content IS the demo and stays exactly as designed (Wing, 422 followers,
+  // the slab grails, Search's collectors and binders, posts). On top of it we add only what you do in
+  // the demo: cards, binders, memories and wish-list cards Mori saves, follows, saved binders,
+  // check-ins and the points they earn. It's stored in your account, so it's there next time too.
   const keyFor = (id) => "r" + String(id).replace(/-/g, "");
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const COLORS = ["purple", "pink", "blue"];
+  const S0 = P.S;
+  const BASE = {
+    points: S0.points, followers: S0.followers, following: S0.following, streak: S0.streak,
+    binders: S0.binders.slice(), memories: S0.memories.slice(), saved: S0.savedBinders.slice(),
+    followingSet: new Set(S0.followingSet), wish: window.bdL ? window.bdL.wish.slice() : [],
+    posts: window.bdPOSTS ? window.bdPOSTS.slice() : [], reels: window.bdREELS ? window.bdREELS.slice() : [],
+  };
+  window.bdCollectorIds = {}; // wireframe collector name -> real account id (Follow)
+  window.bdBinderIds = {}; // wireframe public binder key -> real binder id (Save binder)
+  const plain = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
   function addCard(key, c) {
     const meta = [c.set_name, c.number && "#" + c.number].filter(Boolean).join(" · ");
@@ -3434,16 +3474,13 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     if (c.image_url) P.IMG[key] = c.image_url;
   }
 
-  function replaceProfileText(name, handle, bio) {
+  function replaceProfileText(name) {
     const root = app.querySelector('[data-screen="profile"]');
-    if (!root) return;
+    if (!root || !name) return;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       const n = walker.currentNode;
-      let v = n.nodeValue;
-      if (name) v = v.replace(/Wing Wu/g, name);
-      if (handle) v = v.replace(/wingcollects/g, handle);
-      if (bio) v = v.replace(/Cards, memories and moonlit finds\./g, bio);
+      const v = n.nodeValue.replace(/Wing Wu/g, name);
       if (v !== n.nodeValue) n.nodeValue = v;
     }
   }
@@ -3451,195 +3488,105 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   async function loadMyData() {
     if (!(await fresh())) return;
     const uid = session.user.id;
-    const [prof, cards, binders, links, mems, wish, pts, fers, fing] = await Promise.all([
-      sb.from("profiles").select("display_name, username, bio").eq("id", uid).maybeSingle(),
-      sb.from("cards").select("*").eq("user_id", uid).order("created_at", { ascending: false }),
-      sb.from("binders").select("id, name, description, is_public, cover_image").eq("user_id", uid).order("created_at"),
+    const prof = await sb.from("profiles").select("display_name, settings").eq("id", uid).maybeSingle();
+    // Everything before the demo collection was loaded is the database's own sample; the wireframe
+    // already shows the demo, so only count what happened after.
+    const since = (prof.data && prof.data.settings && prof.data.settings.demo_loaded) || "1970-01-01T00:00:00Z";
+    const after = (q) => q.gt("created_at", since);
+    const [cards, binders, links, mems, wish, pts, fers, fo, sv, checks, posts, cols, bins] = await Promise.all([
+      after(sb.from("cards").select("*").eq("user_id", uid)).order("created_at", { ascending: false }),
+      after(sb.from("binders").select("id, name, description, is_public, cover_image").eq("user_id", uid)).order("created_at"),
       sb.from("binder_cards").select("binder_id, card_id, position").eq("user_id", uid).order("position"),
-      sb.from("memories").select("*").eq("user_id", uid).order("happened_on", { ascending: false, nullsFirst: false }),
-      sb.from("wishlist").select("*").eq("user_id", uid).order("created_at", { ascending: false }),
-      sb.from("points_events").select("points").eq("user_id", uid),
+      after(sb.from("memories").select("*").eq("user_id", uid)).order("created_at", { ascending: false }),
+      after(sb.from("wishlist").select("*").eq("user_id", uid)).order("created_at", { ascending: false }),
+      after(sb.from("points_events").select("points").eq("user_id", uid)),
       sb.from("follows").select("follower_id", { count: "exact", head: true }).eq("followee_id", uid),
-      sb.from("follows").select("followee_id", { count: "exact", head: true }).eq("follower_id", uid),
-    ]);
-    if (cards.error || binders.error || links.error) return; // keep what's showing rather than half-fill it
-    const S = P.S;
-
-    // Cards
-    const byId = new Map();
-    for (const c of cards.data) { const k = keyFor(c.id); addCard(k, c); byId.set(c.id, k); }
-
-    // Binders: artwork cover when set, otherwise the wireframe's own colour
-    const inBinder = new Set();
-    S.binders = binders.data.map((b, i) => {
-      const keys = links.data.filter((l) => l.binder_id === b.id).map((l) => byId.get(l.card_id)).filter(Boolean);
-      keys.forEach((k) => inBinder.add(k));
-      return {
-        id: keyFor(b.id), name: b.name, type: b.description || "Binder", privacy: b.is_public ? "Public" : "Private",
-        color: COLORS[i % COLORS.length], cover: b.cover_image ? { type: "img", src: b.cover_image } : null,
-        coverNote: "Binder cover", cards: keys, extra: 0,
-      };
-    });
-    S.loose = [...byId.values()].filter((k) => !inBinder.has(k));
-    if (S.binders[0]) S.currentBinder = S.binders[0].id;
-
-    // Grails: your top three, or your newest cards if you haven't picked any
-    const grails = cards.data.filter((c) => c.is_grail).sort((a, b) => a.grail_rank - b.grail_rank).map((c) => byId.get(c.id));
-    const top = (grails.length ? grails : [...byId.values()]).slice(0, 3);
-    if (top.length) {
-      top.forEach((k, i) => (P.CARDS[k].grail = i + 1));
-      P.GRAIL_KEYS.splice(0, P.GRAIL_KEYS.length, ...top);
-      S.currentCard = top[0];
-    }
-
-    // Memories
-    if (!mems.error)
-      S.memories = mems.data.map((m) => {
-        const d = m.happened_on ? new Date(m.happened_on + "T00:00:00Z") : null;
-        const card = m.card_tcgdex_id ? cards.data.find((c) => c.tcgdex_id === m.card_tcgdex_id) : null;
-        return {
-          id: keyFor(m.id), prompt: 0, title: m.title, card: card ? card.name : "", day: d ? String(d.getUTCDate()) : "",
-          month: d ? MONTHS[d.getUTCMonth()] : "", year: d ? String(d.getUTCFullYear()) : "",
-          occasion: m.place || "", text: m.note || "",
-        };
-      });
-
-    // Wish list
-    if (!wish.error && window.bdL) {
-      window.bdL.wish = wish.data.map((w) => {
-        const k = keyFor(w.id);
-        addCard(k, { name: w.name, image_url: w.image_url, set_name: "", rarity: "" });
-        return k;
-      });
-    }
-
-    // Points, followers, name
-    if (!pts.error) P.setPoints(pts.data.reduce((n, p) => n + p.points, 0));
-    if (!fers.error) S.followers = fers.count || 0;
-    if (!fing.error) S.following = fing.count || 0;
-    const name = prof.data?.display_name || session.user.email?.split("@")[0] || "";
-    window.bdFirstName = name.split(" ")[0] || "Wing";
-    replaceProfileText(name, prof.data?.username, prof.data?.bio);
-
-    // Posts and videos for your profile grid
-    const posts = await sb.from("posts").select("*").eq("user_id", uid).order("created_at", { ascending: false });
-    if (!posts.error && window.bdPOSTS && window.bdREELS) {
-      const KIND = { post: "Post", video: "Video", story_card: "Story card", recap: "Recap", cover: "Binder cover" };
-      const firstImage = (p) => p.media_url || p.body?.frames?.[0]?.image || p.body?.image || p.body?.images?.[0] || "";
-      const mapped = posts.data.map((p) => {
-        const k = "rpo" + keyFor(p.id);
-        P.IMG[k] = firstImage(p);
-        return { p, k };
-      }).filter((x) => P.IMG[x.k]);
-      window.bdPOSTS.splice(0, window.bdPOSTS.length, ...mapped.map(({ p, k }) => ({ img: k, kind: KIND[p.kind] || "Post", video: p.kind === "video", caption: p.caption || "" })));
-      window.bdREELS.splice(0, window.bdREELS.length, ...mapped.filter(({ p }) => p.kind === "video").map(({ p, k }) => ({
-        img: k, source: p.made_with_mori ? "Made with Mori" : "Uploaded",
-        length: "0:" + String(Math.max(1, (p.body?.frames?.length || 1) * 3)).padStart(2, "0"), views: "New", caption: p.caption || "",
-      })));
-    }
-
-    // Daily check-in streak (days are UTC, as stored)
-    const checks = await sb.from("check_ins").select("day").eq("user_id", uid).order("day", { ascending: false });
-    if (!checks.error) {
-      const days = new Set(checks.data.map((c) => c.day));
-      const today = new Date().toISOString().slice(0, 10);
-      const d = new Date(today + "T00:00:00Z");
-      if (!days.has(today)) d.setUTCDate(d.getUTCDate() - 1);
-      let streak = 0;
-      while (days.has(d.toISOString().slice(0, 10))) { streak++; d.setUTCDate(d.getUTCDate() - 1); }
-      S.streak = streak; S.checkedIn = days.has(today);
-    }
-
-    // Collector level and Mori's stage for Mori Studio
-    setLevel(S.points);
-
-    await loadCommunity(uid);
-
-    // Redraw with the wireframe's own renderers
-    for (const fn of ["renderMyBinder", "renderJourney", "renderProfile"]) try { P[fn](); } catch {}
-    for (const r of ["collection", "home", "profile", "mori-room"]) try { P.R[r] && P.R[r](); } catch {}
-  }
-  /* ---------------- Levels, Search and saved binders ---------------- */
-  const LEVELS = [[0, "Newcomer"], [100, "Collector"], [200, "Curator"], [400, "Archivist"], [800, "Keeper"], [1600, "Legend"]];
-  const STAGES = ["Spark", "Glow", "Starlight", "Moonlit", "Celestial", "Aurora"];
-  function setLevel(points) {
-    let i = 0;
-    LEVELS.forEach((l, k) => { if (points >= l[0]) i = k; });
-    const next = LEVELS[i + 1];
-    const pct = next ? Math.round(((points - LEVELS[i][0]) / (next[0] - LEVELS[i][0])) * 100) : 100;
-    window.bdLevel = {
-      mori: "Level " + (i + 1) + " · " + STAGES[i], moriPct: pct,
-      collector: "Level " + (i + 1) + " · " + LEVELS[i][1], pct,
-      next: next ? next[0] : points, nextName: next ? "Level " + (i + 2) + " · " + next[1] : "Top level",
-    };
-  }
-
-  // Search, collector pages and public binder pages: real public collectors and binders.
-  window.bdCollectorIds = {};
-  window.bdBinderIds = {};
-  async function loadCommunity(uid) {
-    const [cols, bins] = await Promise.all([
+      sb.from("follows").select("followee_id").eq("follower_id", uid),
+      sb.from("saved_binders").select("binder_id").eq("user_id", uid),
+      sb.from("check_ins").select("day").eq("user_id", uid),
+      after(sb.from("posts").select("*").eq("user_id", uid)).order("created_at", { ascending: false }),
       sb.rpc("list_public_collectors", { p_query: "" }),
       sb.rpc("list_public_binders", { p_query: "" }),
     ]);
-    if (cols.error || bins.error || !Array.isArray(cols.data) || !Array.isArray(bins.data)) return;
-    const people = cols.data;
-    const binders = bins.data.filter((b) => !b.is_mine && b.owner_username);
-    const details = await Promise.all(binders.map((b) => sb.rpc("read_public_binder", { p_id: b.id })));
-    const nameOf = {};
-    for (const c of people) {
-      const first = (c.display_name || c.username).split(" ")[0];
-      nameOf[c.username] = first;
-      window.bdCollectorIds[first] = c.id;
-      const img = "avr" + keyFor(c.id);
-      if (c.avatar_url) P.IMG[img] = c.avatar_url;
-      P.COLLECTORS[first] = {
-        img, full: c.display_name || c.username, handle: "@" + c.username, bio: c.bio || "", location: c.location || "",
-        gender: "", genderLabel: "", followers: String(c.followers ?? 0), likes: "0", saves: "0",
-        tag: (c.bio || "Collector").split(".")[0], skin: "", companion: "Mori", binders: [], grails: [],
-      };
-    }
-    const feed = [];
-    binders.forEach((b, i) => {
-      const owner = nameOf[b.owner_username];
-      if (!owner) return;
-      const k = "rp" + keyFor(b.id);
-      window.bdBinderIds[k] = b.id;
-      const d = details[i].data;
-      const cardKeys = ((d && d.cards) || []).map((c) => {
-        const ck = "rc" + keyFor(c.id);
-        addCard(ck, { name: c.name, image_url: c.image_url });
-        return ck;
-      });
-      P.PB[k] = { name: b.name, owner, saves: String(b.saves ?? 0), color: "lilac", tags: [], cards: cardKeys };
-      const C = P.COLLECTORS[owner];
-      C.binders.push(k);
-      C.saves = String(Number(C.saves) + Number(b.saves || 0));
-      for (const ck of cardKeys) if (C.grails.length < 3) C.grails.push(ck);
-      feed.push(k);
-    });
-    P.FEED.splice(0, P.FEED.length, ...feed);
-
-    const row = app.querySelector("[data-collector-row]");
-    if (row)
-      row.innerHTML = people.map((c) => {
-        const n = nameOf[c.username];
-        return '<button data-go="collector-profile" data-collector="' + esc(n) + '"><img class="cp-avatar-img" src="' +
-          esc(P.IMG[P.COLLECTORS[n].img] || "") + '" alt="' + esc(n) + "'s profile photo\"><span>" + esc(n) + "</span></button>";
-      }).join("");
-
-    const [sv, fo] = await Promise.all([
-      sb.from("saved_binders").select("binder_id").eq("user_id", uid),
-      sb.from("follows").select("followee_id").eq("follower_id", uid),
-    ]);
     const S = P.S;
-    if (!sv.error) S.savedBinders = sv.data.map((r) => "rp" + keyFor(r.binder_id)).filter((k) => P.PB[k]);
-    if (!fo.error) {
-      const ids = new Set(fo.data.map((r) => r.followee_id));
-      S.followingSet = new Set(Object.keys(window.bdCollectorIds).filter((n) => ids.has(window.bdCollectorIds[n])));
+
+    // Map the wireframe's collectors and public binders to the real ones with the same name,
+    // so Follow and Save binder are stored for real.
+    if (Array.isArray(cols.data))
+      for (const c of cols.data) {
+        const first = (c.display_name || c.username || "").split(" ")[0];
+        if (P.COLLECTORS[first]) window.bdCollectorIds[first] = c.id;
+      }
+    if (Array.isArray(bins.data))
+      for (const b of bins.data) {
+        if (b.is_mine) continue;
+        const k = Object.keys(P.PB).find((key) => plain(P.PB[key].name) === plain(b.name));
+        if (k) window.bdBinderIds[k] = b.id;
+      }
+
+    // Cards and binders you added in the demo
+    const byId = new Map();
+    for (const c of cards.data || []) { const k = keyFor(c.id); addCard(k, c); byId.set(c.id, k); }
+    const newBinders = (binders.data || []).map((b, i) => ({
+      id: keyFor(b.id), name: b.name, type: b.description || "Binder", privacy: b.is_public ? "Public" : "Private",
+      color: COLORS[i % COLORS.length], cover: b.cover_image ? { type: "img", src: b.cover_image } : null, coverNote: "Binder cover",
+      cards: (links.data || []).filter((l) => l.binder_id === b.id).map((l) => byId.get(l.card_id)).filter(Boolean), extra: 0,
+    }));
+    S.binders = BASE.binders.concat(newBinders);
+    const inNew = new Set(newBinders.flatMap((b) => b.cards));
+    S.loose = [...byId.values()].filter((k) => !inNew.has(k));
+
+    // Memories and wish-list cards you added
+    const newMems = (mems.data || []).map((m) => {
+      const d = m.happened_on ? new Date(m.happened_on + "T00:00:00Z") : new Date(m.created_at);
+      return {
+        id: keyFor(m.id), prompt: 0, title: m.title, card: "", day: String(d.getUTCDate()),
+        month: MONTHS[d.getUTCMonth()], year: String(d.getUTCFullYear()), occasion: m.place || "", text: m.note || "",
+      };
+    });
+    S.memories = newMems.concat(BASE.memories);
+    if (window.bdL)
+      window.bdL.wish = (wish.data || []).map((w) => {
+        const k = keyFor(w.id);
+        addCard(k, { name: w.name, image_url: w.image_url, set_name: "", rarity: "" });
+        return k;
+      }).concat(BASE.wish);
+
+    // Points, follows, saves, check-ins: the demo's numbers plus yours
+    P.setPoints(BASE.points + (pts.data || []).reduce((n, p) => n + p.points, 0));
+    S.followers = BASE.followers + (fers.count || 0);
+    const followedIds = new Set((fo.data || []).map((r) => r.followee_id));
+    const followedNames = Object.keys(window.bdCollectorIds).filter((n) => followedIds.has(window.bdCollectorIds[n]));
+    S.followingSet = new Set([...BASE.followingSet, ...followedNames]);
+    S.following = BASE.following + followedNames.filter((n) => !BASE.followingSet.has(n)).length;
+    const savedIds = new Set((sv.data || []).map((r) => r.binder_id));
+    const savedKeys = Object.keys(window.bdBinderIds).filter((k) => savedIds.has(window.bdBinderIds[k]));
+    S.savedBinders = [...new Set([...savedKeys, ...BASE.saved])];
+    const today = new Date().toISOString().slice(0, 10);
+    S.checkedIn = (checks.data || []).some((c) => c.day === today);
+    S.streak = BASE.streak + (S.checkedIn ? 1 : 0);
+
+    // Posts you created in the demo, before the demo's own
+    if (window.bdPOSTS && window.bdREELS) {
+      const KIND = { post: "Post", video: "Video", story_card: "Story card", recap: "Recap", cover: "Binder cover" };
+      const mine = (posts.data || []).map((p) => {
+        const k = "rpo" + keyFor(p.id);
+        P.IMG[k] = p.media_url || (p.body && p.body.frames && p.body.frames[0] && p.body.frames[0].image) || (p.body && p.body.image) || "";
+        return { p, k };
+      }).filter((x) => P.IMG[x.k]);
+      window.bdPOSTS.splice(0, window.bdPOSTS.length, ...mine.map(({ p, k }) => ({ img: k, kind: KIND[p.kind] || "Post", video: p.kind === "video", caption: p.caption || "" })), ...BASE.posts);
+      window.bdREELS.splice(0, window.bdREELS.length, ...mine.filter(({ p }) => p.kind === "video").map(({ p, k }) => ({ img: k, source: p.made_with_mori ? "Made with Mori" : "Uploaded", length: "0:15", views: "New", caption: p.caption || "" })), ...BASE.reels);
     }
-    try { P.renderFeed(); } catch {}
+
+    // Your name in the greetings and profile header
+    const name = (prof.data && prof.data.display_name) || "";
+    if (name) { window.bdFirstName = name.split(" ")[0]; replaceProfileText(name); }
+
+    // Redraw with the wireframe's own renderers
+    for (const fn of ["renderMyBinder", "renderJourney", "renderProfile", "renderFeed"]) try { P[fn](); } catch {}
+    for (const r of ["collection", "home", "profile", "mori-room"]) try { P.R[r] && P.R[r](); } catch {}
   }
+
 
   // Follow, Save binder and Check in also write to your account (the wireframe updates its own screen).
   document.addEventListener("click", (e) => {
