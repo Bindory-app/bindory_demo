@@ -3229,7 +3229,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
      on any phone, the app keeps that 318px layout and is scaled up as a whole to fill the screen width.
      Everything inside the app is the wireframe's own markup, styles and script, unchanged. -->
 <style id="bd-app-mode">
-  html, body { margin: 0 !important; padding: 0 !important; height: 100%; }
+  html, body { margin: 0 !important; padding: 0 !important; height: 100%; overflow: hidden; }
   body.bd-app { background: #f6f5fc; overflow: hidden; }
   body.bd-app #clickable-prototype { padding: 0 !important; min-height: 100dvh; background: #f6f5fc !important; }
   body.bd-app #clickable-prototype .cp-intro,
@@ -3241,23 +3241,37 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     box-shadow: none !important; background: transparent !important; zoom: var(--bd-zoom, 1);
   }
   body.bd-app #clickable-prototype .cp-phone::before, body.bd-app #clickable-prototype .cp-phone::after { display: none !important; }
-  body.bd-app #clickable-prototype .cp-app { width: 318px !important; height: var(--bd-height, 594px) !important; border-radius: 0 !important; }
+  body.bd-app #clickable-prototype .cp-app { width: 318px !important; height: var(--bd-height, 594px) !important; min-height: 0 !important; border-radius: 0 !important; }
   /* The wireframe sizes Search's binder list for its 594px-tall phone; give it the extra height of a taller screen. */
   body.bd-app #clickable-prototype [data-screen="explore"] .cp-binder-feed { max-height: calc(255px + var(--bd-extra, 0px)) !important; }
+  /* Tablets and desktops: a phone-sized app, centred, on the Bindory background. */
+  body.bd-app.bd-wide #clickable-prototype .cp-shell { align-items: center; background: radial-gradient(circle at 30% 20%, #ece8ff, #f6f5fc 60%) !important; }
+  body.bd-app.bd-wide #clickable-prototype .cp-app { border-radius: var(--bd-radius, 0px) !important; box-shadow: 0 20px 60px rgba(40, 30, 90, .18), 0 0 0 1px rgba(40, 30, 90, .06) !important; overflow: hidden; }
   @media (prefers-color-scheme: dark) {
+    body.bd-app.bd-wide #clickable-prototype .cp-shell { background: radial-gradient(circle at 30% 20%, #262040, #171426 60%) !important; }
     body.bd-app, body.bd-app #clickable-prototype { background: #171426 !important; }
   }
 </style>
 <script>
   (() => {
     document.body.classList.add("bd-app");
-    // Same 318px layout as the wireframe, scaled to the screen (capped so desktops show a phone-sized app).
+    // Same 318px layout as the wireframe, scaled as a whole to fit the screen.
     const fit = () => {
-      const zoom = Math.min(window.innerWidth, 430) / 318;
+      // The real viewport size (innerWidth can grow to the page's own width on phones).
+      const w = document.documentElement.clientWidth || window.innerWidth;
+      const h = document.documentElement.clientHeight || window.innerHeight;
+      const wide = w >= 600;
+      // Phones: fill the screen. Wider screens: a phone-sized app (390px wide), centred with a margin when tall enough.
+      // Short screens (phones in landscape) scale down so the whole app, down to its bottom bar, still fits.
+      const zoom = Math.min(wide ? 390 / 318 : w / 318, h / 540);
+      const gap = wide && h >= 640 ? Math.min(32, (h - 600) / 2) : 0;
+      const height = wide ? Math.min(h - 2 * gap, 900) : h;
+      document.body.classList.toggle("bd-wide", wide);
       const root = document.documentElement.style;
       root.setProperty("--bd-zoom", String(zoom));
-      root.setProperty("--bd-height", window.innerHeight / zoom + "px");
-      root.setProperty("--bd-extra", Math.max(0, window.innerHeight / zoom - 594) + "px");
+      root.setProperty("--bd-height", height / zoom + "px");
+      root.setProperty("--bd-extra", Math.max(0, height / zoom - 594) + "px");
+      root.setProperty("--bd-radius", gap ? "26px" : "0px");
     };
     fit();
     window.addEventListener("resize", fit);

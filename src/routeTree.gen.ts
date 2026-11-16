@@ -19,6 +19,7 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as TrendingBindersRouteImport } from './routes/trending-binders'
+import { Route as ApiGateRouteImport } from './routes/api/gate'
 import { Route as ApiMoriChatRouteImport } from './routes/api/mori-chat'
 import { Route as ApiMoriConfirmRouteImport } from './routes/api/mori-confirm'
 import { Route as BIdRouteImport } from './routes/b.$id'
@@ -76,6 +77,11 @@ const TrendingBindersRoute = TrendingBindersRouteImport.update({
   path: '/trending-binders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGateRoute = ApiGateRouteImport.update({
+  id: '/api/gate',
+  path: '/api/gate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMoriChatRoute = ApiMoriChatRouteImport.update({
   id: '/api/mori-chat',
   path: '/api/mori-chat',
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
+  '/api/gate': typeof ApiGateRoute
   '/api/mori-chat': typeof ApiMoriChatRoute
   '/api/mori-confirm': typeof ApiMoriConfirmRoute
   '/b/$id': typeof BIdRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
+  '/api/gate': typeof ApiGateRoute
   '/api/mori-chat': typeof ApiMoriChatRoute
   '/api/mori-confirm': typeof ApiMoriConfirmRoute
   '/b/$id': typeof BIdRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/studio': typeof StudioRoute
   '/trending-binders': typeof TrendingBindersRoute
+  '/api/gate': typeof ApiGateRoute
   '/api/mori-chat': typeof ApiMoriChatRoute
   '/api/mori-confirm': typeof ApiMoriConfirmRoute
   '/b/$id': typeof BIdRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/studio'
     | '/trending-binders'
+    | '/api/gate'
     | '/api/mori-chat'
     | '/api/mori-confirm'
     | '/b/$id'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/studio'
     | '/trending-binders'
+    | '/api/gate'
     | '/api/mori-chat'
     | '/api/mori-confirm'
     | '/b/$id'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/studio'
     | '/trending-binders'
+    | '/api/gate'
     | '/api/mori-chat'
     | '/api/mori-confirm'
     | '/b/$id'
@@ -230,6 +242,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   StudioRoute: typeof StudioRoute
   TrendingBindersRoute: typeof TrendingBindersRoute
+  ApiGateRoute: typeof ApiGateRoute
   ApiMoriChatRoute: typeof ApiMoriChatRoute
   ApiMoriConfirmRoute: typeof ApiMoriConfirmRoute
   BIdRoute: typeof BIdRoute
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrendingBindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/gate': {
+      id: '/api/gate'
+      path: '/api/gate'
+      fullPath: '/api/gate'
+      preLoaderRoute: typeof ApiGateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/mori-chat': {
       id: '/api/mori-chat'
       path: '/api/mori-chat'
@@ -366,6 +386,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   StudioRoute: StudioRoute,
   TrendingBindersRoute: TrendingBindersRoute,
+  ApiGateRoute: ApiGateRoute,
   ApiMoriChatRoute: ApiMoriChatRoute,
   ApiMoriConfirmRoute: ApiMoriConfirmRoute,
   BIdRoute: BIdRoute,

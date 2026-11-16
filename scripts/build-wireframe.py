@@ -4,7 +4,7 @@
 Input:  the wireframe build (the same file published as the Claude artifact
         https://claude.ai/artifact/WCpwEEnmLd392RG34JHTUt), by default
         ~/collector-identity-platform/bindory-pitch-update/dist/bindory-app.html
-Output: public/index.html, served at the root of demo.bindory.app
+Output: wireframe/app.html, served at the root of demo.bindory.app behind the password gate
 
 Only two things are added on top of the wireframe's own markup, styles and script:
   wireframe/app-mode.html  shows the app full screen (no side text, no drawn phone frame)
@@ -76,7 +76,8 @@ for old, new in HOOKS:
     assert html.count(old) == 1, f"hook point not found once: {old[:60]}"
     html = html.replace(old, new, 1)
 
-out = os.path.join(ROOT, "public", "index.html")
+# Served only behind the password gate (src/routes/index.tsx), so it is NOT in public/.
+out = os.path.join(ROOT, "wireframe", "app.html")
 with open(out, "w", encoding="utf-8") as f:
     f.write(html)
 print(f"Wrote {out} ({len(html) // 1024} KB) from {src}")
