@@ -479,17 +479,16 @@ function Notifications({
 function Appearance() {
   const read = () => {
     try {
-      return localStorage.getItem("bindory-theme") ?? "system";
+      return localStorage.getItem("bindory-theme") ?? "light";
     } catch {
       return "system";
     }
   };
-  const [mode, setMode] = useState("system");
+  const [mode, setMode] = useState("light");
   useEffect(() => setMode(read()), []);
   const apply = (m: string) => {
     try {
-      if (m === "system") localStorage.removeItem("bindory-theme");
-      else localStorage.setItem("bindory-theme", m);
+      localStorage.setItem("bindory-theme", m);
     } catch {
       /* storage unavailable: still apply for this visit */
     }

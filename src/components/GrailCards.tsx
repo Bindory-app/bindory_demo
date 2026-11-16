@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { MoreHorizontal, Plus, X, Camera } from "lucide-react";
+import { MoreHorizontal, Plus, X } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,7 +76,7 @@ export function Grails({
                 onClick={() =>
                   card ? (setPhotoCard(card), input.current?.click()) : setRank(slot)
                 }
-                className={`flex h-[30svh] min-h-40 max-h-72 w-full flex-col gap-2 whitespace-normal p-0 shadow-none hover:bg-transparent ${src ? "" : "rounded-2xl border border-dashed border-border bg-secondary/30"}`}
+                className={`flex h-[30svh] min-h-40 max-h-72 w-full flex-col gap-2 whitespace-normal p-0 shadow-none hover:bg-transparent ${src || card ? "" : "rounded-2xl border border-dashed border-border bg-secondary/30"}`}
                 aria-label={card ? `Add slab photo for ${card.name}` : `Choose grail ${slot}`}
               >
                 {src ? (
@@ -85,11 +85,15 @@ export function Grails({
                     alt={`${card?.name} slab`}
                     className="h-full w-full object-contain"
                   />
+                ) : card ? (
+                  <SlabFrame card={card} />
                 ) : (
                   <>
-                    <span className="text-primary">{card ? <Camera /> : <Plus />}</span>
+                    <span className="text-primary">
+                      <Plus />
+                    </span>
                     <span className="px-1 text-xs font-semibold text-muted-foreground">
-                      {card ? "Add slab photo" : "Choose a grail"}
+                      Choose a grail
                     </span>
                   </>
                 )}
@@ -165,5 +169,29 @@ export function Grails({
         </Dialog.Portal>
       </Dialog.Root>
     </>
+  );
+}
+
+/**
+ * A drawn slab case around the card art, shown until a real slab photo is uploaded.
+ * It carries no grade, so it never claims a card has been graded.
+ */
+function SlabFrame({ card }: { card: Card }) {
+  return (
+    <span className="flex h-full w-full flex-col rounded-xl bg-gradient-to-b from-[#3a3f4f] to-[#22252f] p-1.5 shadow-sm">
+      <span className="mb-1 block rounded-md border-2 border-[#d9354a] bg-white px-1.5 py-1 text-left leading-tight">
+        <span className="block truncate text-[8px] font-bold uppercase text-[#1B2340]">
+          {card.name}
+        </span>
+        <span className="block truncate text-[7px] uppercase text-[#1B2340]/70">
+          {[card.year, card.set_name, card.number && `#${card.number}`].filter(Boolean).join(" ")}
+        </span>
+      </span>
+      <span className="flex min-h-0 flex-1 items-center justify-center rounded-md bg-[#15171e] p-1">
+        {card.image_url ? (
+          <img src={card.image_url} alt={card.name} className="h-full w-full object-contain" />
+        ) : null}
+      </span>
+    </span>
   );
 }
