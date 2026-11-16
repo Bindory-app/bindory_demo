@@ -2322,7 +2322,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
  renderIntroInto(screen('intro'),0);renderQuestionInto(screen('question'),0);renderHome();renderMyBinder();renderBinder();renderCard();renderFeed();renderSaved();renderCollector();renderPB();renderJourney();renderStory();renderProfile();renderFollowing();renderBrowser();renderDraft();renderAi();setPoints(S.points);updateAppearanceSummary();
 
  /* Hooks for the design-library board */
- window.cpProto={GRAIL_KEYS,go,back,current:()=>current,S,CARDS,COLLECTORS,IMG,R,labels,ownBinder,count,binderBg,cardArtHTML,grailShowcaseHTML,grailCarouselHTML,pbTile,checkIn,renderMyBinder,renderJourney,renderProfile,setPoints,toast,centerCarousel,closeSheets,variant(root,routeName,v){const s=root.querySelector('.cp-screen[data-screen="'+routeName+'"]');if(!s||!v)return;
+ window.cpProto={GRAIL_KEYS,PB,FEED,renderFeed,renderPB,renderCollector,go,back,current:()=>current,S,CARDS,COLLECTORS,IMG,R,labels,ownBinder,count,binderBg,cardArtHTML,grailShowcaseHTML,grailCarouselHTML,pbTile,checkIn,renderMyBinder,renderJourney,renderProfile,setPoints,toast,centerCarousel,closeSheets,variant(root,routeName,v){const s=root.querySelector('.cp-screen[data-screen="'+routeName+'"]');if(!s||!v)return;
   if(routeName==='intro')return renderIntroInto(s,Number(v)-1);
   if(routeName==='question')return renderQuestionInto(s,Number(v)-1);
   if(routeName==='home')return void(s.querySelector('.cp-home-order').innerHTML=homeHTML(orderFor(v)));
@@ -3020,7 +3020,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   /* My Profile: Instagram style, built around posts                     */
   /* ------------------------------------------------------------------ */
   const prScreen = screen('profile');
-  const POSTS = [
+  const POSTS = window.bdPOSTS = [
     { img: 'cover-moonmoments', kind: 'Binder cover', caption: 'A new cover for my night binder, designed with Mori.' },
     { card: 'umbreon', kind: 'Video', video: true, caption: 'The trade at league night, told in 24 seconds.' },
     { card: 'charizard', kind: 'Story card', caption: 'First convention find. The card that anchors my collection.' },
@@ -3032,7 +3032,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     { img: 'cover-softstudio', kind: 'Binder cover', caption: 'Soft palettes for the pastel pages.' }
   ];
   const postSrc = p => p.card ? cardImg(p.card) : (IMG[p.img] || '');
-  const REELS = [
+  const REELS = window.bdREELS = [
     { card: 'umbreon', source: 'Made with Mori', length: '0:24', views: '2.4k', caption: 'The trade at league night.' },
     { img: 'cover-celestial', source: 'Made with Mori', length: '0:30', views: '1.1k', caption: 'My 2026 in cards.' },
     { card: 'charizard', source: 'Uploaded', length: '0:41', views: '3.8k', caption: 'Opening the binder I built for my first convention find.' },
@@ -3089,13 +3089,14 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   /* ------------------------------------------------------------------ */
   const WEAR = [['Starlight cape', 'Equipped', 'linear-gradient(145deg,#3b2f8f,#a77cf0 60%,#ffd6a8)', true], ['Moon poncho', 'Level 4', 'linear-gradient(145deg,#25305f,#6c86d8)', false], ['Ear charms', 'Event', 'linear-gradient(145deg,#ffcf8a,#f08fb6)', false], ['Studio scarf', 'Store', 'linear-gradient(145deg,#7e6ce8,#4fc3c9)', false]];
   function renderRoom() {
+    const bdLv = (k, d) => (window.bdLevel && window.bdLevel[k] != null ? window.bdLevel[k] : d);
     const el = qs('[data-room]', screen('mori-room')); if (!el) return;
-    const next = 500, pct = Math.min(100, Math.round(S.points / next * 100));
+    const next = bdLv('next', 500), pct = bdLv('pct', Math.min(100, Math.round(S.points / next * 100)));
     el.innerHTML =
-      '<section class="cp-mori-companion cp-room-mori"><div class="cp-room-stage"><img src="' + MORI_IMG + '" alt="Mori"></div><div class="cp-room-level"><small>Mori</small><b>Level 3 · Starlight</b><span class="cp-room-bar"><i style="width:64%"></i></span><em>Grows as you collect, remember and create</em></div>' +
+      '<section class="cp-mori-companion cp-room-mori"><div class="cp-room-stage"><img src="' + MORI_IMG + '" alt="Mori"></div><div class="cp-room-level"><small>Mori</small><b>' + bdLv('mori', 'Level 3 · Starlight') + '</b><span class="cp-room-bar"><i style="width:' + bdLv('moriPct', 64) + '%"></i></span><em>Grows as you collect, remember and create</em></div>' +
       '<div class="cp-mori-wear">' + WEAR.map(([n, st, bg, on]) => '<button class="' + (on ? 'is-on' : 'is-locked') + '" data-toast="' + esc(on ? n + ' is equipped' : n + ' unlocks at ' + st) + '"><i style="background:' + bg + '"></i><b>' + n + '</b><small>' + st + '</small></button>').join('') + '</div></section>' +
       '<p class="cp-room-title">Your collector level</p>' +
-      '<button class="cp-level-card" data-go="collector-activity"><span><small>Collector level</small><b>Level 3 · Curator</b></span><span class="cp-level-points"><b>' + S.points + '</b> pts</span><span class="cp-level-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span><small class="cp-level-next">' + (S.points >= next ? 'Level 4 · Archivist unlocked' : (next - S.points) + ' points to Level 4 · Archivist') + '</small></button>' +
+      '<button class="cp-level-card" data-go="collector-activity"><span><small>Collector level</small><b>' + bdLv('collector', 'Level 3 · Curator') + '</b></span><span class="cp-level-points"><b>' + S.points + '</b> pts</span><span class="cp-level-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span><small class="cp-level-next">' + (S.points >= next ? bdLv('nextName', 'Level 4 · Archivist') + ' unlocked' : (next - S.points) + ' points to ' + bdLv('nextName', 'Level 4 · Archivist')) + '</small></button>' +
       '<button class="cp-room-streak' + (S.checkedIn ? ' is-claimed' : '') + '" data-room-checkin><span class="cp-room-streak-ring">' + S.streak + '</span><span><b>Day ' + S.streak + ' streak</b><small>' + (S.checkedIn ? 'Checked in today' : 'Check in · +10 points') + '</small></span></button>' +
       '<p class="cp-room-title">Badges</p><div class="cp-badges"><span class="is-earned"><i>✦</i><small>First grail</small></span><span class="is-earned"><i>✎</i><small>Storyteller</small></span><span class="is-earned"><i>◌</i><small>' + S.streak + ' day streak</small></span><span><i>▤</i><small>6 binders</small></span><span><i>♥</i><small>100 saves</small></span></div>';
   }
@@ -3419,7 +3420,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   /* ---------------- Your real data in the wireframe's screens ---------------- */
   // Fills the wireframe's own data (cards, binders, grails, memories, wish list, points,
   // followers, name) from your account, then asks the wireframe to redraw. No markup changes.
-  const keyFor = (id) => "r" + String(id).replace(/-/g, "").slice(0, 16);
+  const keyFor = (id) => "r" + String(id).replace(/-/g, "");
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const COLORS = ["purple", "pink", "blue"];
 
@@ -3520,10 +3521,157 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     window.bdFirstName = name.split(" ")[0] || "Wing";
     replaceProfileText(name, prof.data?.username, prof.data?.bio);
 
+    // Posts and videos for your profile grid
+    const posts = await sb.from("posts").select("*").eq("user_id", uid).order("created_at", { ascending: false });
+    if (!posts.error && window.bdPOSTS && window.bdREELS) {
+      const KIND = { post: "Post", video: "Video", story_card: "Story card", recap: "Recap", cover: "Binder cover" };
+      const firstImage = (p) => p.media_url || p.body?.frames?.[0]?.image || p.body?.image || p.body?.images?.[0] || "";
+      const mapped = posts.data.map((p) => {
+        const k = "rpo" + keyFor(p.id);
+        P.IMG[k] = firstImage(p);
+        return { p, k };
+      }).filter((x) => P.IMG[x.k]);
+      window.bdPOSTS.splice(0, window.bdPOSTS.length, ...mapped.map(({ p, k }) => ({ img: k, kind: KIND[p.kind] || "Post", video: p.kind === "video", caption: p.caption || "" })));
+      window.bdREELS.splice(0, window.bdREELS.length, ...mapped.filter(({ p }) => p.kind === "video").map(({ p, k }) => ({
+        img: k, source: p.made_with_mori ? "Made with Mori" : "Uploaded",
+        length: "0:" + String(Math.max(1, (p.body?.frames?.length || 1) * 3)).padStart(2, "0"), views: "New", caption: p.caption || "",
+      })));
+    }
+
+    // Daily check-in streak (days are UTC, as stored)
+    const checks = await sb.from("check_ins").select("day").eq("user_id", uid).order("day", { ascending: false });
+    if (!checks.error) {
+      const days = new Set(checks.data.map((c) => c.day));
+      const today = new Date().toISOString().slice(0, 10);
+      const d = new Date(today + "T00:00:00Z");
+      if (!days.has(today)) d.setUTCDate(d.getUTCDate() - 1);
+      let streak = 0;
+      while (days.has(d.toISOString().slice(0, 10))) { streak++; d.setUTCDate(d.getUTCDate() - 1); }
+      S.streak = streak; S.checkedIn = days.has(today);
+    }
+
+    // Collector level and Mori's stage for Mori Studio
+    setLevel(S.points);
+
+    await loadCommunity(uid);
+
     // Redraw with the wireframe's own renderers
     for (const fn of ["renderMyBinder", "renderJourney", "renderProfile"]) try { P[fn](); } catch {}
     for (const r of ["collection", "home", "profile", "mori-room"]) try { P.R[r] && P.R[r](); } catch {}
   }
+  /* ---------------- Levels, Search and saved binders ---------------- */
+  const LEVELS = [[0, "Newcomer"], [100, "Collector"], [200, "Curator"], [400, "Archivist"], [800, "Keeper"], [1600, "Legend"]];
+  const STAGES = ["Spark", "Glow", "Starlight", "Moonlit", "Celestial", "Aurora"];
+  function setLevel(points) {
+    let i = 0;
+    LEVELS.forEach((l, k) => { if (points >= l[0]) i = k; });
+    const next = LEVELS[i + 1];
+    const pct = next ? Math.round(((points - LEVELS[i][0]) / (next[0] - LEVELS[i][0])) * 100) : 100;
+    window.bdLevel = {
+      mori: "Level " + (i + 1) + " · " + STAGES[i], moriPct: pct,
+      collector: "Level " + (i + 1) + " · " + LEVELS[i][1], pct,
+      next: next ? next[0] : points, nextName: next ? "Level " + (i + 2) + " · " + next[1] : "Top level",
+    };
+  }
+
+  // Search, collector pages and public binder pages: real public collectors and binders.
+  window.bdCollectorIds = {};
+  window.bdBinderIds = {};
+  async function loadCommunity(uid) {
+    const [cols, bins] = await Promise.all([
+      sb.rpc("list_public_collectors", { p_query: "" }),
+      sb.rpc("list_public_binders", { p_query: "" }),
+    ]);
+    if (cols.error || bins.error || !Array.isArray(cols.data) || !Array.isArray(bins.data)) return;
+    const people = cols.data;
+    const binders = bins.data.filter((b) => !b.is_mine && b.owner_username);
+    const details = await Promise.all(binders.map((b) => sb.rpc("read_public_binder", { p_id: b.id })));
+    const nameOf = {};
+    for (const c of people) {
+      const first = (c.display_name || c.username).split(" ")[0];
+      nameOf[c.username] = first;
+      window.bdCollectorIds[first] = c.id;
+      const img = "avr" + keyFor(c.id);
+      if (c.avatar_url) P.IMG[img] = c.avatar_url;
+      P.COLLECTORS[first] = {
+        img, full: c.display_name || c.username, handle: "@" + c.username, bio: c.bio || "", location: c.location || "",
+        gender: "", genderLabel: "", followers: String(c.followers ?? 0), likes: "0", saves: "0",
+        tag: (c.bio || "Collector").split(".")[0], skin: "", companion: "Mori", binders: [], grails: [],
+      };
+    }
+    const feed = [];
+    binders.forEach((b, i) => {
+      const owner = nameOf[b.owner_username];
+      if (!owner) return;
+      const k = "rp" + keyFor(b.id);
+      window.bdBinderIds[k] = b.id;
+      const d = details[i].data;
+      const cardKeys = ((d && d.cards) || []).map((c) => {
+        const ck = "rc" + keyFor(c.id);
+        addCard(ck, { name: c.name, image_url: c.image_url });
+        return ck;
+      });
+      P.PB[k] = { name: b.name, owner, saves: String(b.saves ?? 0), color: "lilac", tags: [], cards: cardKeys };
+      const C = P.COLLECTORS[owner];
+      C.binders.push(k);
+      C.saves = String(Number(C.saves) + Number(b.saves || 0));
+      for (const ck of cardKeys) if (C.grails.length < 3) C.grails.push(ck);
+      feed.push(k);
+    });
+    P.FEED.splice(0, P.FEED.length, ...feed);
+
+    const row = app.querySelector("[data-collector-row]");
+    if (row)
+      row.innerHTML = people.map((c) => {
+        const n = nameOf[c.username];
+        return '<button data-go="collector-profile" data-collector="' + esc(n) + '"><img class="cp-avatar-img" src="' +
+          esc(P.IMG[P.COLLECTORS[n].img] || "") + '" alt="' + esc(n) + "'s profile photo\"><span>" + esc(n) + "</span></button>";
+      }).join("");
+
+    const [sv, fo] = await Promise.all([
+      sb.from("saved_binders").select("binder_id").eq("user_id", uid),
+      sb.from("follows").select("followee_id").eq("follower_id", uid),
+    ]);
+    const S = P.S;
+    if (!sv.error) S.savedBinders = sv.data.map((r) => "rp" + keyFor(r.binder_id)).filter((k) => P.PB[k]);
+    if (!fo.error) {
+      const ids = new Set(fo.data.map((r) => r.followee_id));
+      S.followingSet = new Set(Object.keys(window.bdCollectorIds).filter((n) => ids.has(window.bdCollectorIds[n])));
+    }
+    try { P.renderFeed(); } catch {}
+  }
+
+  // Follow, Save binder and Check in also write to your account (the wireframe updates its own screen).
+  document.addEventListener("click", (e) => {
+    if (!session) return;
+    const uid = session.user.id;
+    const S = P.S;
+    const fail = ({ error }) => { if (error && error.code !== "23505") P.toast("Could not save that. Please try again."); };
+    const f = e.target.closest("[data-follow-name],[data-follow-collector],[data-follow-owner]");
+    if (f && app.contains(f)) {
+      const name = f.dataset.followName || ("followCollector" in f.dataset ? S.currentCollector : P.PB[S.currentPB]?.owner);
+      const id = window.bdCollectorIds[name];
+      if (id) {
+        const follow = !S.followingSet.has(name);
+        (follow
+          ? sb.from("follows").insert({ follower_id: uid, followee_id: id })
+          : sb.from("follows").delete().eq("follower_id", uid).eq("followee_id", id)).then(fail);
+      }
+    }
+    const sv = e.target.closest("[data-save-binder]");
+    if (sv && app.contains(sv)) {
+      const k = S.currentPB, id = window.bdBinderIds[k];
+      if (id) {
+        const save = !S.savedBinders.includes(k);
+        (save
+          ? sb.from("saved_binders").insert({ user_id: uid, binder_id: id })
+          : sb.from("saved_binders").delete().eq("user_id", uid).eq("binder_id", id)).then(fail);
+      }
+    }
+    const ci = e.target.closest("[data-check-in],[data-home-checkin],[data-room-checkin]");
+    if (ci && app.contains(ci) && !S.checkedIn) sb.from("check_ins").insert({ user_id: uid }).then(fail);
+  }, true);
+
   window.bdLive.reload = loadMyData;
   fresh().then((s) => s && loadMyData());
   sb.auth.onAuthStateChange((event) => { if (event === "SIGNED_IN") setTimeout(loadMyData, 0); });

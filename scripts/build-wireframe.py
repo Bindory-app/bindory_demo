@@ -46,7 +46,20 @@ html = html[:end] + layers + html[end:] if end != -1 else html + layers
 # Small hooks so the live layer can show the signed-in collector's real data in the wireframe's
 # own screens. Each one only exposes existing data or reads a name; none changes any markup or style.
 HOOKS = [
-    ("window.cpProto={go,back,", "window.cpProto={GRAIL_KEYS,go,back,"),
+    ("window.cpProto={go,back,", "window.cpProto={GRAIL_KEYS,PB,FEED,renderFeed,renderPB,renderCollector,go,back,"),
+    ("  const POSTS = [", "  const POSTS = window.bdPOSTS = ["),
+    ("  const REELS = [", "  const REELS = window.bdREELS = ["),
+    # Mori Studio: your real level (window.bdLevel), falling back to the wireframe's sample text.
+    ("  function renderRoom() {\n",
+     "  function renderRoom() {\n    const bdLv = (k, d) => (window.bdLevel && window.bdLevel[k] != null ? window.bdLevel[k] : d);\n"),
+    ("const next = 500, pct = Math.min(100, Math.round(S.points / next * 100));",
+     "const next = bdLv('next', 500), pct = bdLv('pct', Math.min(100, Math.round(S.points / next * 100)));"),
+    ("<b>Level 3 · Starlight</b><span class=\"cp-room-bar\"><i style=\"width:64%\"></i></span>",
+     "<b>' + bdLv('mori', 'Level 3 · Starlight') + '</b><span class=\"cp-room-bar\"><i style=\"width:' + bdLv('moriPct', 64) + '%\"></i></span>"),
+    ("<small>Collector level</small><b>Level 3 · Curator</b></span><span class=\"cp-level-points\"><b>' + S.points",
+     "<small>Collector level</small><b>' + bdLv('collector', 'Level 3 · Curator') + '</b></span><span class=\"cp-level-points\"><b>' + S.points"),
+    ("(S.points >= next ? 'Level 4 · Archivist unlocked' : (next - S.points) + ' points to Level 4 · Archivist')",
+     "(S.points >= next ? bdLv('nextName', 'Level 4 · Archivist') + ' unlocked' : (next - S.points) + ' points to ' + bdLv('nextName', 'Level 4 · Archivist'))"),
     ("qsa('[data-greeting]',app).forEach(x=>x.textContent=greeting()+', Wing');",
      "qsa('[data-greeting]',app).forEach(x=>x.textContent=greeting()+', '+(window.bdFirstName||'Wing'));"),
     ("  const L = { wish:", "  const L = window.bdL = { wish:"),
