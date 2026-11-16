@@ -5,7 +5,9 @@
  * surface mori-agent.server.ts relied on (streamResponse, GatewayError and the
  * Responses types it uses), so the agent loop itself is unchanged.
  *
- * Server only: reads AI_GATEWAY_API_KEY, which must never reach browser code.
+ * Auth, in order: the Vercel OIDC token for this request (set automatically on Vercel deployments,
+ * no key to manage), VERCEL_OIDC_TOKEN from the environment, then AI_GATEWAY_API_KEY for local runs.
+ * Server only: these credentials must never reach browser code.
  */
 
 const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/responses";
@@ -129,10 +131,12 @@ async function* readSse(body: ReadableStream<Uint8Array>, requestId?: string) {
 /** POST a streaming Responses request to AI Gateway and iterate its SSE events. */
 export async function streamResponse(
   payload: ResponsesRequest,
-  options: { signal?: AbortSignal } = {},
+  options: { signal?: AbortSignal; oidcToken?: string | null } = {},
 ): Promise<AsyncIterable<ResponsesStreamEvent>> {
-  const key = process.env["AI_GATEWAY_API_KEY"];
-  if (!key) throw new GatewayError("not_configured", "AI_GATEWAY_API_KEY is not set");
+  const key =
+    options.oidcToken || process.env["VERCEL_OIDC_TOKEN"] || process.env["AI_GATEWAY_API_KEY"];
+  if (!key)
+    throw new GatewayError("not_configured", "No AI Gateway credential (OIDC token or API key)");
   const res = await fetch(GATEWAY_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },

@@ -326,6 +326,7 @@ export async function runMori(
   message: string,
   emit: (event: MoriStreamEvent) => void = () => {},
   signal?: AbortSignal,
+  oidcToken?: string | null,
 ) {
   const past = await history(db);
   const ins = await db.from("mori_messages").insert({ role: "user", content: message });
@@ -339,7 +340,7 @@ export async function runMori(
     for (let turn = 0; turn < 6; turn++) {
       const stream = await streamResponse(
         { model: MODEL, instructions: SYSTEM, input, tools, max_output_tokens: 1200 },
-        signal ? { signal } : {},
+        { ...(signal ? { signal } : {}), oidcToken: oidcToken ?? null },
       );
       let res: ResponsesResponse | undefined;
       for await (const event of stream) {

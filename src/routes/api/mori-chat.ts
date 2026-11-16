@@ -45,7 +45,9 @@ export const Route = createFileRoute("/api/mori-chat")({
               if (!abort.signal.aborted)
                 controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
             };
-            void runMori(db, userId, message, emit, abort.signal)
+            // On Vercel each request carries a short-lived OIDC token that AI Gateway accepts directly.
+            const oidcToken = request.headers.get("x-vercel-oidc-token");
+            void runMori(db, userId, message, emit, abort.signal, oidcToken)
               .catch((error) => {
                 console.error(
                   "Mori chat failed",
