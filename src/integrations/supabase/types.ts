@@ -69,6 +69,7 @@ export type Database = {
       binders: {
         Row: {
           cover_card_id: string | null
+          cover_image: string | null
           created_at: string
           description: string | null
           id: string
@@ -78,6 +79,7 @@ export type Database = {
         }
         Insert: {
           cover_card_id?: string | null
+          cover_image?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -87,6 +89,7 @@ export type Database = {
         }
         Update: {
           cover_card_id?: string | null
+          cover_image?: string | null
           created_at?: string
           description?: string | null
           id?: string

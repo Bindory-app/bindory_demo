@@ -401,6 +401,33 @@ function Collection() {
               <div className="grid grid-cols-2 gap-3">
                 {binders.map((binder) => {
                   const contents = binderCards(binder);
+                  if (binder.cover_image?.startsWith("/demo/"))
+                    return (
+                      <button
+                        key={binder.id}
+                        type="button"
+                        onClick={() =>
+                          void navigate({ to: "/binders/$id", params: { id: binder.id } })
+                        }
+                        className="relative aspect-[3/4] min-w-0 overflow-hidden rounded-3xl text-left"
+                      >
+                        <img
+                          src={binder.cover_image}
+                          alt=""
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                        <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                        <span className="absolute bottom-3 left-3 right-3 text-white">
+                          <span className="block text-lg font-bold leading-tight">
+                            {binder.name}
+                          </span>
+                          <span className="mt-1 block text-xs opacity-90">
+                            {contents.length} cards · {binder.is_public ? "Public" : "Private"}
+                          </span>
+                        </span>
+                      </button>
+                    );
                   return (
                     <Button
                       key={binder.id}

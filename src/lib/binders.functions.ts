@@ -18,7 +18,7 @@ export const loadOwnedBinder = createServerFn({ method: "GET" })
     const db = context.supabase;
     const binder = await db
       .from("binders")
-      .select("id,name,description,is_public,cover_card_id")
+      .select("id,name,description,is_public,cover_card_id,cover_image")
       .eq("id", data.id)
       .eq("user_id", context.userId)
       .single();

@@ -8,6 +8,7 @@ export type BinderHighlight = {
   id: string;
   name: string;
   cover: string | null;
+  cover_image: string | null;
   is_public: boolean;
 };
 export type SavedBinder = { id: string; name: string; cover: string | null; count: number };
@@ -49,7 +50,7 @@ export async function loadProfileData(uid: string): Promise<ProfileData> {
         .order("created_at", { ascending: false }),
       supabase
         .from("binders")
-        .select("id, name, is_public, cover_card_id")
+        .select("id, name, is_public, cover_card_id, cover_image")
         .eq("user_id", uid)
         .order("created_at"),
       count(supabase.from("cards").select("id", head).eq("user_id", uid)),
@@ -92,6 +93,7 @@ export async function loadProfileData(uid: string): Promise<ProfileData> {
       id: b.id,
       name: b.name,
       is_public: b.is_public,
+      cover_image: b.cover_image,
       cover: b.cover_card_id ? (covers.get(b.cover_card_id) ?? null) : null,
     })),
     saved: savedBinders,

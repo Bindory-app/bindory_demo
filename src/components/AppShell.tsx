@@ -56,7 +56,11 @@ export function AppShell({
                 {kicker}
               </p>
             )}
-            {greeting && <p className="mb-1 text-sm font-bold text-primary">{greeting}</p>}
+            {greeting && (
+              <p className="mb-1 text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                {greeting}
+              </p>
+            )}
             <h1
               className={`truncate font-bold text-foreground ${home || collection ? "text-3xl" : "text-2xl"}`}
             >

@@ -9,11 +9,33 @@ export function BinderCover({
   cards,
   coverId,
   name,
+  coverImage,
+  subtitle,
+  action,
 }: {
   cards: BinderCard[];
   coverId?: string | null;
   name: string;
+  coverImage?: string | null | undefined;
+  subtitle?: string | undefined;
+  action?: React.ReactNode;
 }) {
+  if (coverImage?.startsWith("/demo/"))
+    return (
+      <div className="relative mb-5 aspect-[16/9] w-full overflow-hidden rounded-3xl bg-foreground">
+        <img
+          src={coverImage}
+          alt={`${name} cover`}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+        <div className="absolute bottom-4 left-4 right-16 text-white">
+          <p className="text-2xl font-bold leading-tight">{name}</p>
+          {subtitle && <p className="mt-1 text-sm opacity-90">{subtitle}</p>}
+        </div>
+        {action && <div className="absolute bottom-3 right-3">{action}</div>}
+      </div>
+    );
   const cover = cards.find((c) => c.id === coverId) ?? cards[0];
   return (
     <div className="relative mx-auto mb-5 grid aspect-[4/3] w-full max-w-64 place-items-center rounded-3xl border border-border bg-secondary p-5">

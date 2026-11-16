@@ -2,7 +2,17 @@ import { useState } from "react";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { Pencil, Globe, Link2, ArrowUp, ArrowDown, X, ChevronLeft } from "lucide-react";
+import {
+  Pencil,
+  Globe,
+  Link2,
+  ArrowUp,
+  ArrowDown,
+  X,
+  ChevronLeft,
+  Check,
+  ImageIcon,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BinderCover, BinderPages } from "./BinderPages";
 import { Button } from "@/components/ui/button";
@@ -10,6 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { loadOwnedBinder, saveOwnedBinder } from "@/lib/binders.functions";
 import type { BinderCard } from "@/lib/binders";
+import { supabase } from "@/integrations/supabase/client";
+import { DEMO_ART } from "@/lib/posts";
 
 export function BinderEditor({ id, userId }: { id: string; userId: string }) {
   const load = useServerFn(loadOwnedBinder);
@@ -25,6 +37,17 @@ export function BinderEditor({ id, userId }: { id: string; userId: string }) {
   const [cover, setCover] = useState(b.cover_card_id);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [picking, setPicking] = useState(false);
+  const setCoverImage = async (image: string) => {
+    setBusy(true);
+    const { error } = await supabase.from("binders").update({ cover_image: image }).eq("id", id);
+    setBusy(false);
+    if (error) setNotice("I could not change the cover. Please try again.");
+    else {
+      await cache.invalidateQueries({ queryKey: key });
+      setPicking(false);
+    }
+  };
   const open = (next: typeof mode) => {
     setName(b.name);
     setDescription(b.description ?? "");
@@ -92,11 +115,53 @@ export function BinderEditor({ id, userId }: { id: string; userId: string }) {
           My Collection
         </Link>
       </Button>
-      <BinderCover cards={b.cards} coverId={b.cover_card_id} name={b.name} />
+      <BinderCover
+        cards={b.cards}
+        coverId={b.cover_card_id}
+        name={b.name}
+        coverImage={b.cover_image}
+        subtitle={`${b.is_public ? "Public" : "Private"} binder · ${b.cards.length} cards`}
+        action={
+          b.is_public ? (
+            <Button
+              size="icon"
+              variant="secondary"
+              className="rounded-full"
+              aria-label="Copy share link"
+              onClick={share}
+            >
+              <Link2 />
+            </Button>
+          ) : undefined
+        }
+      />
+      {picking && (
+        <div className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1">
+          {DEMO_ART.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              disabled={busy}
+              onClick={() => void setCoverImage(a.image)}
+              aria-label={`Use ${a.name} as the cover`}
+              className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-2xl ring-2 ${b.cover_image === a.image ? "ring-primary" : "ring-transparent"}`}
+            >
+              <img src={a.image} alt="" className="h-full w-full object-cover" />
+              {b.cover_image === a.image && (
+                <Check className="absolute inset-0 m-auto size-6 text-white drop-shadow" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
       {b.description && (
         <p className="mb-4 text-center text-sm text-muted-foreground">{b.description}</p>
       )}
       <div className="mb-5 flex flex-wrap justify-center gap-2">
+        <Button variant="outline" className="rounded-full" onClick={() => setPicking((p) => !p)}>
+          <ImageIcon />
+          {picking ? "Done" : "Cover art"}
+        </Button>
         <Button variant="outline" className="rounded-full" onClick={() => open("rename")}>
           <Pencil />
           Rename

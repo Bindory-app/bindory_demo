@@ -495,11 +495,43 @@ function CoverBuilder({ binders, save }: { binders: Binder[]; save: Save }) {
       </select>
       <Label>Artwork</Label>
       <ArtPicker value={art} set={setArt} />
+      <UseAsCover binderId={binderId} image={art} name={body.title} />
       <SaveBar
         onSave={(share) =>
           save("cover", `A new cover for ${body.title}`, body as unknown as Json, share)
         }
       />
     </>
+  );
+}
+
+/** Applies the chosen artwork to the binder itself, so it shows in Collection, Search and Profile. */
+function UseAsCover({ binderId, image, name }: { binderId: string; image: string; name: string }) {
+  const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
+  useEffect(() => setState("idle"), [binderId, image]);
+  const apply = async () => {
+    setState("busy");
+    const { error } = await supabase
+      .from("binders")
+      .update({ cover_image: image })
+      .eq("id", binderId);
+    setState(error ? "error" : "done");
+  };
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        disabled={state === "busy" || state === "done"}
+        onClick={() => void apply()}
+        className="w-full rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
+      >
+        {state === "done" ? `Now the cover of ${name}` : `Use as the cover of ${name}`}
+      </button>
+      {state === "error" && (
+        <p className="mt-2 text-center text-sm text-destructive">
+          Could not change the cover. Please try again.
+        </p>
+      )}
+    </div>
   );
 }

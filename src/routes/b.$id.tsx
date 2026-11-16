@@ -64,7 +64,13 @@ function PublicBinder() {
         {binder ? (
           <>
             <h1 className="mb-5 mt-4 break-words text-2xl font-bold">{binder.name}</h1>
-            <BinderCover cards={binder.cards} coverId={binder.cover_card_id} name={binder.name} />
+            <BinderCover
+              cards={binder.cards}
+              coverId={binder.cover_card_id}
+              name={binder.name}
+              coverImage={binder.cover_image}
+              subtitle={binder.owner ? `By ${binder.owner}` : undefined}
+            />
             {binder.description && (
               <p className="mb-5 text-sm text-muted-foreground">{binder.description}</p>
             )}

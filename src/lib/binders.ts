@@ -11,6 +11,10 @@ export type BinderDetail = {
   description: string | null;
   is_public: boolean;
   cover_card_id: string | null;
+  /** Artwork cover from public/demo; falls back to the cover card. */
+  cover_image?: string | null;
+  /** Owner display name, on the public page only. */
+  owner?: string | null;
   cards: BinderCard[];
 };
 

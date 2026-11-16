@@ -207,11 +207,11 @@ function Profile() {
             className="w-[72px] shrink-0 text-center"
           >
             <span className="block h-[72px] w-[72px] overflow-hidden rounded-full border-2 border-secondary bg-muted p-0.5">
-              {b.cover ? (
+              {b.cover_image || b.cover ? (
                 <img
-                  src={b.cover}
+                  src={b.cover_image || b.cover || ""}
                   alt=""
-                  className="h-full w-full rounded-full object-cover object-top"
+                  className={`h-full w-full rounded-full object-cover ${b.cover_image ? "" : "object-top"}`}
                 />
               ) : (
                 <span className="block h-full w-full rounded-full bg-brand" />
