@@ -1250,15 +1250,23 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 #clickable-prototype .cp-collection-screen .cp-col-mem-title{justify-content:space-between;margin:2px 0 6px}
 #clickable-prototype .cp-collection-screen .cp-col-story{margin-top:14px;width:100%}
 
-/* Ask Mori: suggested questions drifting left to right in three rows (pauses on hover or touch). */
-#clickable-prototype .cp-mori-marquee{display:grid;gap:7px;margin:16px -17px 0;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+/* Ask Mori: six fixed shortcuts, then Suggestions drifting left to right in two rows (pause on hover or touch). */
+#clickable-prototype .cp-mori-hello .cp-mori-face.cp-mori-face-xl img{height:108px}
+#clickable-prototype .cp-mori-screen.is-empty .cp-mori-hello{gap:8px}
+#clickable-prototype .cp-mori-primary{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:4px;margin-top:10px}
+#clickable-prototype .cp-mori-primary button{display:flex;align-items:center;gap:5px;min-height:0;padding:5px 6px;border:1px solid var(--theme-ddd8ec,#ddd8ec);background:var(--mori-card);color:var(--mori-ink);border-radius:9px;font:inherit;font-size:8px;font-weight:700;letter-spacing:-.01em;line-height:1.2;white-space:nowrap;overflow:hidden;text-align:left;cursor:pointer;transition:border-color .15s,color .15s}
+#clickable-prototype .cp-mori-primary button:hover{border-color:var(--mori-primary);color:var(--mori-primary)}
+#clickable-prototype .cp-mori-primary svg,#clickable-prototype .cp-mori-ideas-head svg{width:11px;height:11px;flex:none;fill:none;stroke:var(--mori-primary);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+#clickable-prototype .cp-mori-ideas{margin-top:10px}
+#clickable-prototype .cp-mori-ideas-head{display:flex;align-items:center;gap:4px;margin:0 0 5px;font-size:8.5px;font-weight:800;color:var(--mori-muted)}
+#clickable-prototype .cp-mori-ideas-head svg{width:10px;height:10px}
+#clickable-prototype .cp-mori-marquee{display:grid;gap:4px;margin:0 -17px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
 #clickable-prototype .cp-mori-marquee-row{overflow:hidden}
-#clickable-prototype .cp-mori-marquee-track{display:flex;width:max-content;animation:cp-mori-drift calc(48s + var(--row) * 8s) linear infinite;animation-delay:calc(var(--row) * -9s)}
+#clickable-prototype .cp-mori-marquee-track{display:flex;width:max-content;animation:cp-mori-drift calc(60s + var(--row) * 10s) linear infinite;animation-delay:calc(var(--row) * -14s)}
 #clickable-prototype .cp-mori-marquee:hover .cp-mori-marquee-track,#clickable-prototype .cp-mori-marquee:active .cp-mori-marquee-track,#clickable-prototype .cp-mori-marquee:focus-within .cp-mori-marquee-track{animation-play-state:paused}
-#clickable-prototype .cp-mori-marquee-set{display:flex;gap:7px;padding-right:7px}
-#clickable-prototype .cp-mori-marquee button{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid var(--theme-ddd8ec,#ddd8ec);background:var(--mori-card);color:var(--mori-ink);border-radius:99px;padding:7px 12px 7px 10px;font:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s}
+#clickable-prototype .cp-mori-marquee-set{display:flex;gap:4px;padding-right:4px}
+#clickable-prototype .cp-mori-marquee button{white-space:nowrap;border:1px solid var(--theme-ddd8ec,#ddd8ec);background:var(--mori-card);color:var(--mori-muted);border-radius:99px;padding:4px 8px;font:inherit;font-size:8px;font-weight:600;cursor:pointer;transition:border-color .15s,color .15s}
 #clickable-prototype .cp-mori-marquee button:hover{border-color:var(--mori-primary);color:var(--mori-primary)}
-#clickable-prototype .cp-mori-marquee svg{width:13px;height:13px;flex:none;fill:none;stroke:var(--mori-primary);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 #clickable-prototype .cp-mori-sample{font-size:10.5px;opacity:.65;margin-top:6px}
 @keyframes cp-mori-drift{from{transform:translateX(-50%)}to{transform:translateX(0)}}
 @media (prefers-reduced-motion:reduce){#clickable-prototype .cp-mori-marquee-row{overflow-x:auto;scrollbar-width:none}#clickable-prototype .cp-mori-marquee-track{animation:none}}
@@ -2422,36 +2430,43 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 
   /* A new collector sees one question and four starting points; everything else is just typed. */
   const STARTERS = [['memory', 'Save a memory'], ['add', 'Add a card'], ['binder', 'Build a binder'], ['studio', 'Create something']];
-  /* Suggested questions drift slowly across in three rows (tap one to ask it). Each row is
-     repeated once so the loop is seamless; the copy is hidden from screen readers. */
+  /* Six fixed shortcuts (icon + short label), then Suggestions: two rows of example questions
+     drifting left to right. Each drifting row is repeated once so the loop is seamless; the copy is
+     hidden from screen readers. */
   const ICON = {
     price: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+    order: '<path d="M7 4v16M7 4 3.5 7.5M7 4l3.5 3.5"/><path d="M17 20V4M17 20l-3.5-3.5M17 20l3.5-3.5"/>',
     grade: '<path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6l-7-3Z"/><path d="m9 12 2 2 4-4"/>',
     add: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 9v6M9 12h6"/>',
-    binder: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5v-15Z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H19v-3"/><path d="M8 7h7"/>',
-    create: '<path d="m12 3 1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/>',
-    tradeup: '<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
-    show: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     memory: '<path d="M12 20.5s-8-4.6-8-10.4A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 8 2.5c0 5.8-8 10.4-8 10.4Z"/>',
-    complete: '<path d="M9 3h6v3a2 2 0 1 0 4 0h2v6h-3a2 2 0 1 0 0 4h3v5H3V3h6Z"/>'
+    tradeup: '<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    idea: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2V16h5v-.2c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3Z"/>'
   };
-  const SUGGESTIONS = [
-    [['price', 'What is my Umbreon VMAX worth today?'], ['grade', 'Would my Charizard grade a PSA 10?'], ['add', 'Can you add new cards to my collection?']],
-    [['binder', 'Can you build a binder from my moon cards?'], ['create', 'Can you make a video of my collection?'], ['tradeup', 'Can you set me a trade-up challenge?']],
-    [['show', 'When is the next card show near me?'], ['memory', 'Can you help me save a card memory?'], ['complete', 'Which cards would complete my set?']]
+  const svg = k => '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICON[k] + '</svg>';
+  const PRIMARY = [
+    ['price', 'Price check', 'Price check my Umbreon VMAX'],
+    ['order', 'Set buy or sell order', 'Set a buy or sell order'],
+    ['grade', 'Pre-grade assessment', 'Pre-grade my Charizard'],
+    ['add', 'Add new cards to collection', 'Add new cards to my collection'],
+    ['memory', 'Log a new memory'],
+    ['tradeup', 'Trade-up challenge', 'Start a trade-up challenge']
   ];
-  const suggestion = ([icon, q], hidden) =>
-    '<button ' + (icon === 'memory' ? 'data-mori-prompt="memory"' : 'data-mori-ask="' + esc(q) + '"') + (hidden ? ' tabindex="-1"' : '') + '>' +
-    '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICON[icon] + '</svg>' + esc(q) + '</button>';
-  const suggestionRows = () => '<div class="cp-mori-marquee" aria-label="Suggested questions">' + SUGGESTIONS.map((row, i) =>
-    '<div class="cp-mori-marquee-row" style="--row:' + i + '"><div class="cp-mori-marquee-track">' +
-    '<div class="cp-mori-marquee-set">' + row.map(x => suggestion(x)).join('') + '</div>' +
-    '<div class="cp-mori-marquee-set" aria-hidden="true">' + row.map(x => suggestion(x, true)).join('') + '</div>' +
-    '</div></div>').join('') + '</div>';
+  const SUGGESTIONS = [
+    ['When is the next card show near me?', 'Can you build a binder from my collection?', 'What is the next trendy collection?', 'Which of my cards went up in value this month?'],
+    ['What card should I chase next?', 'Which collectors share my taste?', 'Can you make a video of my collection?', 'Which cards would complete my set?']
+  ];
+  const primaryButtons = () => '<div class="cp-mori-primary">' + PRIMARY.map(([icon, label, q]) =>
+    '<button ' + (q ? 'data-mori-ask="' + esc(q) + '"' : 'data-mori-prompt="memory"') + '>' + svg(icon) + '<span>' + esc(label) + '</span></button>').join('') + '</div>';
+  const suggestionRows = () => '<div class="cp-mori-ideas"><p class="cp-mori-ideas-head">' + svg('idea') + 'Suggestions</p>' +
+    '<div class="cp-mori-marquee">' + SUGGESTIONS.map((row, i) => {
+      const set = hidden => '<div class="cp-mori-marquee-set"' + (hidden ? ' aria-hidden="true"' : '') + '>' +
+        row.map(q => '<button data-mori-ask="' + esc(q) + '"' + (hidden ? ' tabindex="-1"' : '') + '>' + esc(q) + '</button>').join('') + '</div>';
+      return '<div class="cp-mori-marquee-row" style="--row:' + i + '"><div class="cp-mori-marquee-track">' + set(false) + set(true) + '</div></div>';
+    }).join('') + '</div></div>';
   function renderEmpty() {
     thread.innerHTML =
-      '<div class="cp-mori-hello">' + face('cp-mori-face-xl') + '<b>' + (guest ? 'Hi, I am Mori. What shall we do today?' : 'Hi ' + (window.bdFirstName || 'Wing') + ', what shall we do today?') + '</b></div>' +
-      suggestionRows();
+      '<div class="cp-mori-hello">' + face('cp-mori-face-xl') + '<b>' + (guest ? 'Hi, I am Mori.<br>What shall we do today?' : 'Hi ' + (window.bdFirstName || 'Wing') + ',<br>what shall we do today?') + '</b></div>' +
+      primaryButtons() + suggestionRows();
     moriScreen.classList.add('is-empty');
   }
   const isEmpty = () => !qs('.cp-mori-msg', thread);
@@ -2516,6 +2531,11 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     if (M.pending === 'rename') return renameBinder(text);
     if (M.pending === 'add-name') { M.pending = null; return addCard(findCard(text) || scanCandidate(), false); }
     if (attached) return addCard(attached, true);
+    if (/buy or sell|buy order|sell order/.test(t)) return orders();
+    if (/trend/.test(t)) return trending();
+    if (/went up|gone up|movers|gainers/.test(t)) return movers();
+    if (/chase/.test(t)) return related(findCard(text) || 'espeon');
+    if (/share my taste/.test(t)) return discover();
     if (/trade[- ]?up/.test(t)) return tradeUp();
     if (/card show|event|convention|fair\b/.test(t)) return cardShow();
     if (/\bgrade|psa|pre-?grad|condition/.test(t)) return preGrade(findCard(text) || 'charizard');
@@ -2707,6 +2727,31 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       '<li><small>Collectors you follow who are going</small><b>Mina and Leo</b></li></ul>' +
       '<p class="cp-mori-sample">Sample event in this preview.</p>' +
       chips([['Remind me the day before', act('remind')], ['Set me a trade-up challenge', ask('Can you set me a trade-up challenge?')]]));
+  }
+
+  async function orders() {
+    await think('Checking your wish list and grails', 850);
+    const want = L.wish.find(k => CARDS[k]) || 'lugia', have = ownedCards().slice(-1)[0];
+    say('<p>Pick a card and a price. I will watch listings and let you know when one matches.</p><ul class="cp-mori-facts">' +
+      '<li><small>Buy order · from your wish list</small><b>' + esc(CARDS[want].name) + ' up to ' + usd(140) + '</b></li>' +
+      (have ? '<li><small>Sell order · from your collection</small><b>' + esc(CARDS[have].name) + ' at ' + usd(65) + ' or more</b></li>' : '') + '</ul>' + sampleNote +
+      chips([['Set the buy order', act('order', 'buy')], ['Set the sell order', act('order', 'sell')], ['Price check first', ask('Price check my ' + CARDS[want].name)]]));
+  }
+  async function trending() {
+    await think('Looking at what collectors are adding this month', 950);
+    say('<p>Trending with collectors this month:</p><ul class="cp-mori-facts">' +
+      '<li><small>Up 32% in new binders</small><b>Night and moon artwork</b></li>' +
+      '<li><small>Up 21%</small><b>Illustration rares by one artist</b></li>' +
+      '<li><small>Up 14%</small><b>Vintage Neo era holos</b></li></ul>' +
+      '<p>You already own 7 moon themed cards, so you are ahead on the first one.</p>' + sampleNote +
+      chips([['Build a binder from my moon cards', ask('Can you build a binder from my moon cards?')], ['What card should I chase next?', ask('What card should I chase next?')]]));
+  }
+  async function movers() {
+    await think('Comparing this month with last month', 900);
+    const top = ownedCards().slice(0, 3);
+    say('<p>Your biggest movers this month:</p><ul class="cp-mori-facts">' +
+      top.map((k, i) => '<li><small>Up ' + [18, 11, 7][i] + '%</small><b>' + esc(CARDS[k].name) + '</b></li>').join('') + '</ul>' + sampleNote +
+      chips([['Price check my Umbreon VMAX', ask('Price check my Umbreon VMAX')], ['Set a sell order', ask('Set a buy or sell order')]]));
   }
 
   /* ---- Knowledge ----------------------------------------------------- */
@@ -2946,6 +2991,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       case 'studio-save': await studioSave(el, arg); break;
       case 'post': await post(el); break;
       case 'post-yes': lockActions(el); L.posted = true; renderProfileExtras(); toast('Posted to your profile'); say('<p>Posted. Only the caption and artwork are public.</p>'); break;
+      case 'order': lockActions(el); toast(arg === 'sell' ? 'Sell order set' : 'Buy order set'); say('<p>Done. I will let you know as soon as a listing matches your ' + (arg === 'sell' ? 'sell' : 'buy') + ' order.</p>'); break;
       case 'remind': lockActions(el); toast('Reminder set'); say('<p>Done. I will remind you the day before.</p>'); break;
       case 'dismiss': lockActions(el); say('<p>No problem. Nothing was changed.</p>'); break;
       case 'fill': lockActions(el); input.value = arg; input.focus(); break;

@@ -68,7 +68,7 @@ HOOKS = [
      "const ownedCards = () => [...new Set(S.binders.flatMap(b => b.cards).concat(S.loose || []))]"),
     ("const allOwnedCards = () => [...new Set(S.binders.flatMap(b => b.cards))]",
      "const allOwnedCards = () => [...new Set(S.binders.flatMap(b => b.cards).concat(S.loose || []))]"),
-    ("'Hi Wing, what shall we do today?'", "'Hi ' + (window.bdFirstName || 'Wing') + ', what shall we do today?'"),
+    ("'Hi Wing,<br>what shall we do today?'", "'Hi ' + (window.bdFirstName || 'Wing') + ',<br>what shall we do today?'"),
     ("toast('Welcome back, Wing')", "toast('Welcome back, ' + (window.bdFirstName || 'Wing'))"),
     ("You are all set, Wing.", "You are all set, ' + (window.bdFirstName || 'Wing') + '."),
 ]
