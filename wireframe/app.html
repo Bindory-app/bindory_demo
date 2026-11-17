@@ -1249,6 +1249,19 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 /* Memories tab = My Journey in place */
 #clickable-prototype .cp-collection-screen .cp-col-mem-title{justify-content:space-between;margin:2px 0 6px}
 #clickable-prototype .cp-collection-screen .cp-col-story{margin-top:14px;width:100%}
+
+/* Ask Mori: suggested questions drifting left to right in three rows (pauses on hover or touch). */
+#clickable-prototype .cp-mori-marquee{display:grid;gap:7px;margin:16px -17px 0;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+#clickable-prototype .cp-mori-marquee-row{overflow:hidden}
+#clickable-prototype .cp-mori-marquee-track{display:flex;width:max-content;animation:cp-mori-drift calc(48s + var(--row) * 8s) linear infinite;animation-delay:calc(var(--row) * -9s)}
+#clickable-prototype .cp-mori-marquee:hover .cp-mori-marquee-track,#clickable-prototype .cp-mori-marquee:active .cp-mori-marquee-track,#clickable-prototype .cp-mori-marquee:focus-within .cp-mori-marquee-track{animation-play-state:paused}
+#clickable-prototype .cp-mori-marquee-set{display:flex;gap:7px;padding-right:7px}
+#clickable-prototype .cp-mori-marquee button{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid var(--theme-ddd8ec,#ddd8ec);background:var(--mori-card);color:var(--mori-ink);border-radius:99px;padding:7px 12px 7px 10px;font:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s}
+#clickable-prototype .cp-mori-marquee button:hover{border-color:var(--mori-primary);color:var(--mori-primary)}
+#clickable-prototype .cp-mori-marquee svg{width:13px;height:13px;flex:none;fill:none;stroke:var(--mori-primary);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+#clickable-prototype .cp-mori-sample{font-size:10.5px;opacity:.65;margin-top:6px}
+@keyframes cp-mori-drift{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+@media (prefers-reduced-motion:reduce){#clickable-prototype .cp-mori-marquee-row{overflow-x:auto;scrollbar-width:none}#clickable-prototype .cp-mori-marquee-track{animation:none}}
 </style>
 <section id="clickable-prototype" aria-label="Clickable Bindory prototype">
   <div class="cp-shell">
@@ -2409,10 +2422,36 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 
   /* A new collector sees one question and four starting points; everything else is just typed. */
   const STARTERS = [['memory', 'Save a memory'], ['add', 'Add a card'], ['binder', 'Build a binder'], ['studio', 'Create something']];
+  /* Suggested questions drift slowly across in three rows (tap one to ask it). Each row is
+     repeated once so the loop is seamless; the copy is hidden from screen readers. */
+  const ICON = {
+    price: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+    grade: '<path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6l-7-3Z"/><path d="m9 12 2 2 4-4"/>',
+    add: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 9v6M9 12h6"/>',
+    binder: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5v-15Z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H19v-3"/><path d="M8 7h7"/>',
+    create: '<path d="m12 3 1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/>',
+    tradeup: '<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    show: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    memory: '<path d="M12 20.5s-8-4.6-8-10.4A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 8 2.5c0 5.8-8 10.4-8 10.4Z"/>',
+    complete: '<path d="M9 3h6v3a2 2 0 1 0 4 0h2v6h-3a2 2 0 1 0 0 4h3v5H3V3h6Z"/>'
+  };
+  const SUGGESTIONS = [
+    [['price', 'What is my Umbreon VMAX worth today?'], ['grade', 'Would my Charizard grade a PSA 10?'], ['add', 'Can you add new cards to my collection?']],
+    [['binder', 'Can you build a binder from my moon cards?'], ['create', 'Can you make a video of my collection?'], ['tradeup', 'Can you set me a trade-up challenge?']],
+    [['show', 'When is the next card show near me?'], ['memory', 'Can you help me save a card memory?'], ['complete', 'Which cards would complete my set?']]
+  ];
+  const suggestion = ([icon, q], hidden) =>
+    '<button ' + (icon === 'memory' ? 'data-mori-prompt="memory"' : 'data-mori-ask="' + esc(q) + '"') + (hidden ? ' tabindex="-1"' : '') + '>' +
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICON[icon] + '</svg>' + esc(q) + '</button>';
+  const suggestionRows = () => '<div class="cp-mori-marquee" aria-label="Suggested questions">' + SUGGESTIONS.map((row, i) =>
+    '<div class="cp-mori-marquee-row" style="--row:' + i + '"><div class="cp-mori-marquee-track">' +
+    '<div class="cp-mori-marquee-set">' + row.map(x => suggestion(x)).join('') + '</div>' +
+    '<div class="cp-mori-marquee-set" aria-hidden="true">' + row.map(x => suggestion(x, true)).join('') + '</div>' +
+    '</div></div>').join('') + '</div>';
   function renderEmpty() {
     thread.innerHTML =
       '<div class="cp-mori-hello">' + face('cp-mori-face-xl') + '<b>' + (guest ? 'Hi, I am Mori. What shall we do today?' : 'Hi ' + (window.bdFirstName || 'Wing') + ', what shall we do today?') + '</b></div>' +
-      '<div class="cp-mori-starters">' + STARTERS.map(([k, t]) => '<button data-mori-prompt="' + k + '">' + t + '</button>').join('') + '</div>';
+      suggestionRows();
     moriScreen.classList.add('is-empty');
   }
   const isEmpty = () => !qs('.cp-mori-msg', thread);
@@ -2477,6 +2516,10 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     if (M.pending === 'rename') return renameBinder(text);
     if (M.pending === 'add-name') { M.pending = null; return addCard(findCard(text) || scanCandidate(), false); }
     if (attached) return addCard(attached, true);
+    if (/trade[- ]?up/.test(t)) return tradeUp();
+    if (/card show|event|convention|fair\b/.test(t)) return cardShow();
+    if (/\bgrade|psa|pre-?grad|condition/.test(t)) return preGrade(findCard(text) || 'charizard');
+    if (/worth|price|value|sell for|how much/.test(t)) return priceCheck(findCard(text) || 'umbreon');
     if (/japan|trip/.test(t)) return japan();
     if (/collector|people|community|like me|share my taste/.test(t)) return discover();
     if (/video|studio|story card|recap|post|cover/.test(t)) return studio(/cover/.test(t) ? 'cover' : /recap/.test(t) ? 'recap' : /story card/.test(t) ? 'story' : 'video');
@@ -2626,6 +2669,44 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       ...(b ? [['Open ' + b.name, 'data-go="binder-collection" data-binder="' + b.id + '"']] : []),
       ['Find related cards', ask('What cards are related to my ' + c.name + '?')]
     ]));
+  }
+
+  /* ---- Price, grading, trade-ups and events (sample answers in the prototype) ---- */
+  const sampleNote = '<p class="cp-mori-sample">Sample figures in this preview.</p>';
+  const usd = n => 'US$' + Math.round(n).toLocaleString('en-US');
+  async function priceCheck(k) {
+    const c = CARDS[k];
+    const base = 18 + [...k].reduce((n, ch) => n + ch.charCodeAt(0), 0) % 160;
+    await think('Checking recent sold listings', 950);
+    say('<p>Recent sales for <b>' + esc(c.name) + '</b> (' + esc(c.set) + '):</p><ul class="cp-mori-facts">' +
+      '<li><small>Raw, near mint</small><b>' + usd(base * 0.9) + ' to ' + usd(base * 1.15) + '</b></li>' +
+      '<li><small>PSA 9</small><b>' + usd(base * 1.9) + '</b></li><li><small>PSA 10</small><b>' + usd(base * 4.2) + '</b></li>' +
+      '<li><small>Last 30 days</small><b>Up 6%</b></li></ul>' + sampleNote +
+      chips([['Would it grade a PSA 10?', ask('Would my ' + c.name + ' grade a PSA 10?')], ['Find related cards', act('related', k)]]));
+  }
+  async function preGrade(k) {
+    const c = CARDS[k];
+    const el = say('<p>Pre-grade check for <b>' + esc(c.name) + '</b>, from your card photo:</p>');
+    await steps(el, ['Centering: 55/45 front, 60/40 back', 'Corners: sharp', 'Edges: light whitening on the back', 'Surface: clean, no print lines']);
+    say('<p>Likely grade: <b>PSA 9</b>. A 10 is possible, but the back edge is the risk. Worth grading if you plan to keep it.</p><p class="cp-mori-sample">An estimate, not an official grade.</p>' +
+      chips([['What is it worth graded?', ask('What is my ' + c.name + ' worth today?')]]));
+  }
+  async function tradeUp() {
+    await think('Looking for cards you rarely open', 950);
+    const give = ownedCards().slice(-3);
+    const target = L.wish.find(k => CARDS[k]) || Object.keys(CARDS).find(k => isCatalogCard(k) && !owned(k));
+    say('<p><b>Trade-up challenge:</b> turn three cards you rarely open into one you really want.</p><div class="cp-mori-cards">' + give.map(k => cardTile(k, 'Trade away')).join('') + '</div>' +
+      (target ? '<p>Your target: <b>' + esc(CARDS[target].name) + '</b>, from your wish list. Make the trade at a card show or with a collector you follow, then tell me and I will save it as a memory.</p>' : '') +
+      chips([['When is the next card show?', ask('When is the next card show near me?')], ['Give me another challenge', ask('Give me another trade-up challenge')]]));
+  }
+  async function cardShow() {
+    await think('Checking card events near you', 850);
+    say('<p>The next card show near you:</p><ul class="cp-mori-facts">' +
+      '<li><small>Saturday 6 December · 10am to 4pm</small><b>Collectors Card Fair</b></li>' +
+      '<li><small>Where</small><b>City Convention Centre, Hall B</b></li>' +
+      '<li><small>Collectors you follow who are going</small><b>Mina and Leo</b></li></ul>' +
+      '<p class="cp-mori-sample">Sample event in this preview.</p>' +
+      chips([['Remind me the day before', act('remind')], ['Set me a trade-up challenge', ask('Can you set me a trade-up challenge?')]]));
   }
 
   /* ---- Knowledge ----------------------------------------------------- */
@@ -2865,6 +2946,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       case 'studio-save': await studioSave(el, arg); break;
       case 'post': await post(el); break;
       case 'post-yes': lockActions(el); L.posted = true; renderProfileExtras(); toast('Posted to your profile'); say('<p>Posted. Only the caption and artwork are public.</p>'); break;
+      case 'remind': lockActions(el); toast('Reminder set'); say('<p>Done. I will remind you the day before.</p>'); break;
       case 'dismiss': lockActions(el); say('<p>No problem. Nothing was changed.</p>'); break;
       case 'fill': lockActions(el); input.value = arg; input.focus(); break;
       case 'open-col': L.colTab = arg; renderCollection(); nav('collection'); break;
