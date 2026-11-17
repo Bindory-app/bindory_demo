@@ -5,6 +5,7 @@ export const WRITE_TOOLS = [
   "create_binder",
   "save_memory",
   "add_to_wishlist",
+  "set_order",
 ] as const;
 export type WriteTool = (typeof WRITE_TOOLS)[number];
 export const isWriteTool = (n: string): n is WriteTool =>
@@ -20,6 +21,8 @@ export const TOOL_STATUS: Record<string, string> = {
   create_binder: "Designing a binder",
   save_memory: "Checking what is missing",
   add_to_wishlist: "Preparing your wishlist",
+  get_card_prices: "Checking recent market prices",
+  set_order: "Preparing your order",
 };
 
 export const POINTS = { card_added: 10, memory_saved: 25 } as const;
@@ -44,6 +47,14 @@ export type Proposal =
       date?: string | undefined;
       card?: ProposalCard | undefined;
       photo_path?: string | undefined;
+    }
+  | {
+      tool: "set_order";
+      side: "buy" | "sell";
+      card: ProposalCard;
+      price_usd: number;
+      market_usd?: number | undefined;
+      note?: string | undefined;
     };
 
 export type ProposalPayload = Proposal & { status: "pending" | "confirmed" | "edited" };
@@ -58,6 +69,8 @@ export function proposalTitle(p: Proposal): string {
       return `Create the binder “${p.name}”`;
     case "save_memory":
       return `Save the memory “${p.title}”`;
+    case "set_order":
+      return `${p.side === "buy" ? "Buy" : "Sell"} ${p.card.name} at US$${p.price_usd}`;
   }
 }
 

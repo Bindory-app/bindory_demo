@@ -8,7 +8,14 @@ import {
 } from "./ai-gateway.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
-import { cardImage, cardsByIllustrator, getCard, getSet, searchCards } from "./tcgdex";
+import {
+  cardImage,
+  cardsByIllustrator,
+  getCard,
+  getCardPricing,
+  getSet,
+  searchCards,
+} from "./tcgdex";
 import { validateWriteArgs, ownPhotoPath } from "./mori-validation";
 import {
   isWriteTool,
@@ -24,19 +31,23 @@ type DB = SupabaseClient<Database>;
 // Default is on the AI Gateway free tier; newer models need paid credits.
 const MODEL = process.env["AI_GATEWAY_MODEL"] || "google/gemini-2.5-flash";
 
-const SYSTEM = `You are Mori, a warm, concise Pokémon TCG collector agent inside the Bindory app. Keep replies short (1-3 sentences), friendly, US English, sentence case.
-You can only act through your tools: search_catalogue, add_card_to_collection, suggest_binder_for_card, create_binder, save_memory, add_to_wishlist, find_related_cards, list_my_cards, find_collectors.
+const SYSTEM = `You are Mori, a warm, concise Pokémon TCG collector agent inside the Bindory app. Keep replies short (2-5 sentences, or a short list), friendly, US English, sentence case. Use **bold** for card names and key numbers.
+You act through your tools: search_catalogue, get_card_prices, list_my_cards, find_related_cards, find_collectors, suggest_binder_for_card, add_card_to_collection, add_to_wishlist, create_binder, save_memory, set_order.
 Rules:
-- Never invent data. Every card, set, artist, memory or collector you mention must come from a tool result in this conversation. If a tool returns nothing, say "I could not find any" and offer a next step.
-- Before calling save_memory, ask short follow-up questions, one at a time, for anything missing: who they were with, where it happened, and whether they want to attach a photo (they can tap the camera button). If they say skip, continue without it.
+- Never invent data. Every card, set, artist, price, memory or collector you mention must come from a tool result or a photo in this conversation. If a tool returns nothing, say so and offer a next step.
+- Card ids are TCGdex ids such as "swsh7-215". Find them with search_catalogue first (search by the Pokémon/card name, then pick the result whose number matches); never guess an id.
+- Photos: when the user sends card photos, identify the card from what you can see (name, number, set symbol), then find it with search_catalogue. Never claim to identify a photo you have not seen.
+- Prices: only quote prices from get_card_prices, say where they come from (TCGplayer in US$, Cardmarket in EUR) and that they are recent raw (ungraded) market prices. If there is no price data, say so. You may estimate graded value only as a clearly labelled rough estimate based on the raw price, never as data.
+- Pre-grading: only from photos you have seen. Comment on centering, corners, edges and surface, give a likely grade range, and say it is an estimate, not an official grade. Never promise a PSA 10; glare and photo angle limit what you can see. If there are no photos, ask for front and back photos.
+- Should I grade it: compare the raw market price with the likely graded outcome after a typical grading fee (about US$25-150 depending on service level and value), and recommend clearly.
+- Buy or sell orders: you need buy or sell, the card, and a price in US$. Ask for anything missing. Check get_card_prices so you can say how the price compares with the market, then call set_order. Orders are watch alerts in this demo: Mori notifies the collector when a matching listing appears; nothing is bought or sold automatically.
+- Trade-up challenge: use list_my_cards and get_card_prices to suggest trading two or three cards the collector owns toward one higher-value card they would love, with rough values from the tools.
+- Trends and card shows: you have no live event listings or trend data. Say that plainly, then share general, well-known collector knowledge labelled as general, and suggest where to check (local game stores, official Pokémon event locators, collector communities). Never invent specific events, dates or venues.
+- Before calling save_memory, ask short follow-up questions, one at a time, for anything missing: who they were with, where it happened, and whether they want to attach a photo. If they say skip, continue without it.
 - You cannot make videos, story cards, collection recaps or binder covers yourself. When asked, say they can make one in Create with Mori and include this link: [Open Create with Mori](/create). Never claim you made one.
-- Card ids are TCGdex ids such as "swsh7-215". Find them with search_catalogue first; never guess an id.
-- Writing tools (add_card_to_collection, create_binder, save_memory, add_to_wishlist) show the user a confirmation card with Confirm and Edit buttons. Nothing is saved until they confirm. After calling one, do not claim it is saved.
-- For create_binder give every card a one-line reason. Only include cards the user already owns; never add suggested catalogue cards to their collection as a side effect.
-- Treat placeholders like @username, [location], [date and time] as missing details, not facts. Ask for the actual information.
-- Never claim to identify a photo you have not seen. A photo attachment is optional; ask for the card name if needed.
-- Never discuss prices, values, buying or selling. If asked, say Bindory is about collecting and stories, not prices.
-- If asked about grading, a likely 9 is the most you ever suggest, never a 10.
+- Writing tools (add_card_to_collection, add_to_wishlist, create_binder, save_memory, set_order) show the user a confirmation card with Confirm and Change buttons. Nothing is saved until they confirm. After calling one, do not claim it is saved.
+- For create_binder give every card a one-line reason. Only include cards the user already owns.
+- Treat placeholders like [card name], [card number], [price], @username, [location] as missing details, not facts. Ask for the actual information.
 - Private memories are never shared or used to find other collectors.
 - There is no Pokémon companion feature; you are the collector's companion.`;
 
@@ -51,6 +62,35 @@ const tools: NonNullable<ResponsesRequest["tools"]> = [
       type: "object",
       properties: { name: str("Card name, e.g. Umbreon VMAX") },
       required: ["name"],
+    },
+  },
+  {
+    type: "function",
+    name: "get_card_prices",
+    description:
+      "Recent raw (ungraded) market prices for a TCGdex card: TCGplayer (USD) and Cardmarket (EUR), updated daily.",
+    strict: false,
+    parameters: {
+      type: "object",
+      properties: { card_id: str("TCGdex card id") },
+      required: ["card_id"],
+    },
+  },
+  {
+    type: "function",
+    name: "set_order",
+    description:
+      "Propose a buy or sell order (a price alert) for a card (user confirms). Check get_card_prices first.",
+    strict: false,
+    parameters: {
+      type: "object",
+      properties: {
+        side: { type: "string", enum: ["buy", "sell"] },
+        card_id: str("TCGdex card id"),
+        price_usd: { type: "number", description: "Target price in US dollars" },
+        note: str("Optional note, e.g. condition or grade wanted"),
+      },
+      required: ["side", "card_id", "price_usd"],
     },
   },
   {
@@ -190,6 +230,20 @@ async function runReadTool(db: DB, name: string, a: Args): Promise<unknown> {
         ? r.map((c) => ({ id: c.id, name: c.name, number: c.localId }))
         : { results: [], note: "No cards found" };
     }
+    case "get_card_prices": {
+      const r = await getCardPricing(s(a["card_id"]) ?? "");
+      if (!r) return { error: "Card not found" };
+      return {
+        card: {
+          id: r.card.id,
+          name: r.card.name,
+          number: r.card.localId,
+          set: r.card.set.name,
+          rarity: r.card.rarity,
+        },
+        prices: r.pricing ?? { note: "No market price data for this card" },
+      };
+    }
     case "find_related_cards": {
       const c = await getCard(s(a["card_id"]) ?? "");
       if (!c) return { results: [], note: "Card not found" };
@@ -274,6 +328,29 @@ async function buildProposal(
       cards,
     };
   }
+  if (name === "set_order") {
+    const r = await getCardPricing(s(a["card_id"]) ?? "");
+    if (!r) return { error: "Card not found in the catalogue" };
+    const holo = r.pricing?.tcgplayer
+      ? Object.values(r.pricing.tcgplayer).find(
+          (v): v is { marketPrice?: number } =>
+            typeof v === "object" && v !== null && "marketPrice" in v,
+        )
+      : undefined;
+    return {
+      tool: "set_order",
+      side: a["side"] === "sell" ? "sell" : "buy",
+      card: {
+        tcgdex_id: r.card.id,
+        name: `${r.card.name} ${r.card.localId}`,
+        image: cardImage(r.card.image, "low"),
+        set_name: r.card.set.name,
+      },
+      price_usd: Math.round(Number(a["price_usd"]) * 100) / 100,
+      market_usd: typeof holo?.marketPrice === "number" ? holo.marketPrice : undefined,
+      note: s(a["note"]),
+    };
+  }
   if (name === "save_memory") {
     if (!ownPhotoPath(s(a["photo_path"]), userId))
       return { error: "Photo must belong to the collector." };
@@ -327,12 +404,28 @@ export async function runMori(
   emit: (event: MoriStreamEvent) => void = () => {},
   signal?: AbortSignal,
   oidcToken?: string | null,
+  images: string[] = [],
 ) {
   const past = await history(db);
-  const ins = await db.from("mori_messages").insert({ role: "user", content: message });
+  // The stored text notes the photos so later turns know they were sent (the images themselves are not stored).
+  const stored = images.length
+    ? `${message}\n[Sent ${images.length} card photos: front and back]`
+    : message;
+  const ins = await db.from("mori_messages").insert({ role: "user", content: stored });
   if (ins.error) throw ins.error;
 
-  const input: ResponsesInputItem[] = [...past, { role: "user", content: message }];
+  const input: ResponsesInputItem[] = [
+    ...past,
+    images.length
+      ? {
+          role: "user",
+          content: [
+            { type: "input_text", text: message },
+            ...images.map((image_url) => ({ type: "input_image" as const, image_url })),
+          ],
+        }
+      : { role: "user", content: message },
+  ];
   const rows: { role: "mori"; kind: string; content: string; payload?: Json }[] = [];
   let finalText = "";
 

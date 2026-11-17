@@ -33,6 +33,16 @@ export const Route = createFileRoute("/api/mori-chat")({
           return new Response("Invalid message", { status: 400 });
         const message = body.message.trim();
         const userId = auth.user.id;
+        // The demo's "Take a photo" sends the sample card photos (front and back); the server picks
+        // the images, so the browser can never make the model fetch an arbitrary URL.
+        const images: string[] = [];
+        if ("demo_photo" in body && body.demo_photo === "card") {
+          const [front, back] = await Promise.all([
+            import("@/assets/demo-card-front.jpg?inline"),
+            import("@/assets/demo-card-back.jpg?inline"),
+          ]);
+          images.push(front.default, back.default);
+        }
         if (!ownMessagePhotos(message, userId, "photo_path" in body ? body.photo_path : undefined))
           return new Response("Photo must belong to you", { status: 403 });
         const encoder = new TextEncoder();
@@ -47,7 +57,7 @@ export const Route = createFileRoute("/api/mori-chat")({
             };
             // On Vercel each request carries a short-lived OIDC token that AI Gateway accepts directly.
             const oidcToken = request.headers.get("x-vercel-oidc-token");
-            void runMori(db, userId, message, emit, abort.signal, oidcToken)
+            void runMori(db, userId, message, emit, abort.signal, oidcToken, images)
               .catch((error) => {
                 console.error(
                   "Mori chat failed",

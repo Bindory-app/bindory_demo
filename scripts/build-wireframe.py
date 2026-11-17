@@ -29,15 +29,20 @@ for name in ("app-mode.html", "live.html"):
 
 html = html.replace("<title>Bindory</title>", "<title>Bindory · Ask Mori</title>", 1)
 
-# One hook so the live layer can answer free-typed messages with the real Mori when signed in.
-# Scripted states (onboarding, memory follow-ups, renaming) and attached photos stay with the wireframe.
+# Hooks so the live layer answers with the real Mori when signed in: free-typed messages, shortcut
+# and suggestion taps, the fill-in templates (price, buy/sell order, pre-grade, add card) and the
+# "Take a photo" option (sent with the sample card photos). Onboarding, memory follow-ups and renaming
+# stay with the wireframe's script.
 ROUTE = "  async function route(text, attached) {\n"
 assert html.count(ROUTE) == 1, "wireframe chat route() not found: update the hook in build-wireframe.py"
 html = html.replace(
     ROUTE,
     ROUTE
-    + "    if (window.bdLiveRoute && !M.pending && !attached && await window.bdLiveRoute(text, "
-    + "{ addMsg, say, scrollDown })) return;\n",
+    + "    if (window.bdLiveRoute && !attached && (!M.pending || ['price', 'order', 'grade', 'add'].includes(M.pending))) {\n"
+    + "      const bdPending = M.pending; M.pending = null;\n"
+    + "      if (await window.bdLiveRoute(text, { addMsg, say, scrollDown })) return;\n"
+    + "      M.pending = bdPending;\n"
+    + "    }\n",
     1,
 )
 end = html.rfind("</body>")
@@ -63,6 +68,9 @@ HOOKS = [
     ("qsa('[data-greeting]',app).forEach(x=>x.textContent=greeting()+', Wing');",
      "qsa('[data-greeting]',app).forEach(x=>x.textContent=greeting()+', '+(window.bdFirstName||'Wing'));"),
     ("  const L = { wish:", "  const L = window.bdL = { wish:"),
+    ("  async function photoResult(kind) {\n",
+     "  async function photoResult(kind) {\n"
+     "    if (window.bdLiveRoute && await window.bdLiveRoute(PHOTO_SAYS[kind], { addMsg, say, scrollDown, photo: true })) return;\n"),
     ("const owned = k => !!binderOf(k);", "const owned = k => !!binderOf(k) || (S.loose || []).includes(k);"),
     ("const ownedCards = () => [...new Set(S.binders.flatMap(b => b.cards))]",
      "const ownedCards = () => [...new Set(S.binders.flatMap(b => b.cards).concat(S.loose || []))]"),

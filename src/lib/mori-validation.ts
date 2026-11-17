@@ -25,6 +25,12 @@ export const writeSchemas = {
     card_id: cardId.optional(),
     photo_path: text.optional(),
   }),
+  set_order: z.object({
+    side: z.enum(["buy", "sell"]),
+    card_id: cardId,
+    price_usd: z.coerce.number().positive().max(1_000_000),
+    note: text.optional(),
+  }),
 };
 
 export function validateWriteArgs(name: keyof typeof writeSchemas, args: unknown) {

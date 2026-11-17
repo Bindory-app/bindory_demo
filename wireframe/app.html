@@ -2480,8 +2480,8 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   const PRIMARY = [
     ['price', 'Price check', 'prompt:price'],
     ['order', 'Set buy or sell order', 'prompt:order'],
-    ['grade', 'Pre-grade assessment', 'Pre-grade my Charizard'],
-    ['add', 'Add new cards to collection', 'Add new cards to my collection'],
+    ['grade', 'Pre-grade assessment', 'prompt:grade'],
+    ['add', 'Add new cards to collection', 'prompt:add'],
     ['memory', 'Log a new memory'],
     ['tradeup', 'Trade-up challenge', 'Start a trade-up challenge']
   ];
@@ -2557,13 +2557,19 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   }
 
   async function route(text, attached) {
-    if (window.bdLiveRoute && !M.pending && !attached && await window.bdLiveRoute(text, { addMsg, say, scrollDown })) return;
+    if (window.bdLiveRoute && !attached && (!M.pending || ['price', 'order', 'grade', 'add'].includes(M.pending))) {
+      const bdPending = M.pending; M.pending = null;
+      if (await window.bdLiveRoute(text, { addMsg, say, scrollDown })) return;
+      M.pending = bdPending;
+    }
     const t = text.toLowerCase();
     if (M.pending === 'onboard') return onboardAnswer(text);
     if (M.pending === 'memory-details') return memoryDetails(text, attached);
     if (M.pending === 'prompt-answer') return promptAnswer(text);
     if (M.pending === 'rename') return renameBinder(text);
     if (M.pending === 'price') { M.pending = null; return priceTyped(text); }
+    if (M.pending === 'grade') { M.pending = null; return gradeTyped(text); }
+    if (M.pending === 'add') { M.pending = null; return addTyped(text); }
     if (M.pending === 'order') return orderTyped(text);
     if (M.pending === 'add-name') { M.pending = null; return addCard(findCard(text) || scanCandidate(), false); }
     if (attached) return addCard(attached, true);
@@ -2770,24 +2776,58 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   const CHARX = { name: 'Mega Charizard X ex', number: '125/094', set: 'Phantasmal Flames', rarity: 'Special Illustration Rare', raw: [600, 680], psa9: [620, 730], psa10: [1350, 1500], fee: 125 };
   const money = n => 'US$' + n.toLocaleString('en-US');
   const range = ([a, b]) => money(a) + ' to ' + money(b);
-  function priceStart() {
+  /* Price check, pre-grade and add a card all start the same way: type the card, or send photos. */
+  const CARD_START = {
+    price: { ask: 'Which card should I price? Type the <b>card name and number</b> below, or take a photo of the front and back and I will identify it.', template: PRICE_TEMPLATE, example: 'Price check: Mega Charizard X ex 125/094' },
+    grade: { ask: 'Which card should I pre-grade? Photos of the <b>front and back</b> work best, on a dark, flat background. You can also type the card name and number.', template: 'Pre-grade: [card name] [card number]', example: 'Pre-grade: Mega Charizard X ex 125/094' },
+    add: { ask: 'Which card are you adding? Type the <b>card name and number</b>, or take a photo and I will identify it.', template: 'Add [card name] [card number] to my collection', example: 'Add Umbreon VMAX 215/203 to my collection' }
+  };
+  function cardStart(kind) {
+    const k = CARD_START[kind];
     if (!isEmpty()) thread.insertAdjacentHTML('beforeend', '<hr class="cp-mori-divider">');
-    say('<p>Which card should I price? Type the <b>card name and number</b> below, or take a photo of the front and back and I will identify it.</p><p class="cp-mori-sample">For example: Price check: Mega Charizard X ex 125/094</p>' +
-      chips([['Take a photo', act('price-photo')], ['Upload from my photos', act('price-photo')]]));
-    M.pending = 'price';
-    input.value = PRICE_TEMPLATE; input.focus(); input.setSelectionRange(13, 24); input.scrollLeft = 0;
+    say('<p>' + k.ask + '</p><p class="cp-mori-sample">For example: ' + esc(k.example) + '</p>' +
+      chips([['Take a photo', act('card-photo', kind)], ['Upload from my photos', act('card-photo', kind)]]));
+    M.pending = kind;
+    input.value = k.template; input.focus();
+    const from = k.template.indexOf('['); input.setSelectionRange(from, k.template.indexOf(']', from) + 1); input.scrollLeft = 0;
   }
-  async function pricePhoto(el) {
+  const priceStart = () => cardStart('price');
+  const PHOTO_SAYS = { price: 'Here are photos of the front and back. What is this card worth?', grade: 'Here are photos of the front and back. Can you pre-grade this card?', add: 'Here are photos of the front and back. Please add this card to my collection.' };
+  async function cardPhoto(el, kind) {
     lockActions(el); M.pending = null; input.value = '';
-    userSays('Here are photos of the front and back.');
+    userSays(PHOTO_SAYS[kind]);
     const last = thread.lastElementChild.querySelector('.cp-mori-body');
     last.insertAdjacentHTML('beforeend', '<div class="cp-mori-photos"><span><img src="' + IMG['price-front'] + '" alt="Card front"><i>Front</i></span><span><img src="' + IMG['price-back'] + '" alt="Card back"><i>Back</i></span></div>');
     scrollDown();
-    await think('Identifying the card and comparing market outcomes', 1300);
+    return photoResult(kind);
+  }
+  async function photoResult(kind) {
+    if (window.bdLiveRoute && await window.bdLiveRoute(PHOTO_SAYS[kind], { addMsg, say, scrollDown, photo: true })) return;
+    if (kind === 'add') return addCard('grail-charx-pfl', true);
+    await think(kind === 'grade' ? 'Checking centering, corners, edges and surface' : 'Identifying the card and comparing market outcomes', 1300);
+    if (kind === 'grade') return gradeResult();
     priceResult(true);
   }
+  async function gradeResult() {
+    const c = CHARX;
+    const el = say('<p>This is <b>' + c.name + ' ' + c.number + '</b> from <i>' + c.set + '</i>. Here is what I can see in your photos:</p>');
+    await steps(el, ['Centering: about 55/45 front, 60/40 back', 'Corners: sharp, no visible wear', 'Edges: light whitening on the back', 'Surface: clean, some glare on the holo']);
+    say('<p>Likely grade: <b>PSA 9</b>. A 10 is possible, but the back edge is the risk, and glare hides some of the surface.</p><p class="cp-mori-sample">An estimate from photos, not an official grade.</p>' +
+      chips([['What is it worth graded?', act('price-decision')], ['Price check this card', act('card-photo', 'price')]]));
+  }
+  async function gradeTyped(text) {
+    if (/\[card (name|number)\]/i.test(text)) { say('<p>Replace <b>[card name]</b> and the number with your card, or send photos instead.</p>' + chips([['Take a photo', act('card-photo', 'grade')]])); M.pending = 'grade'; return; }
+    const k = findCard(text);
+    if (k && !/charizard/i.test(CARDS[k].name) && !/125\/094/.test(text)) return preGrade(k);
+    const el = say('<p>For a pre-grade I need to see the card. Send photos of the front and back and I will check centering, corners, edges and surface.</p>');
+    el.querySelector('.cp-mori-body').insertAdjacentHTML('beforeend', chips([['Take a photo', act('card-photo', 'grade')]]));
+  }
+  async function addTyped(text) {
+    if (/\[card (name|number)\]/i.test(text)) { say('<p>Replace <b>[card name]</b> and the number with your card, or take a photo instead.</p>' + chips([['Take a photo', act('card-photo', 'add')]])); M.pending = 'add'; return; }
+    return addCard(findCard(text) || scanCandidate(), false);
+  }
   async function priceTyped(text) {
-    if (/\[card (name|number)\]/i.test(text)) { say('<p>Replace <b>[card name]</b> and the number with your card, or take a photo instead.</p>' + chips([['Take a photo', act('price-photo')]])); M.pending = 'price'; return; }
+    if (/\[card (name|number)\]/i.test(text)) { say('<p>Replace <b>[card name]</b> and the number with your card, or take a photo instead.</p>' + chips([['Take a photo', act('card-photo', 'price')]])); M.pending = 'price'; return; }
     const k = findCard(text);
     if (k && !/charizard/i.test(CARDS[k].name) && !/125\/094/.test(text)) return priceCheck(k);
     await think('Finding the card and comparing market outcomes', 1100);
@@ -3113,7 +3153,8 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       case 'studio-save': await studioSave(el, arg); break;
       case 'post': await post(el); break;
       case 'post-yes': lockActions(el); L.posted = true; renderProfileExtras(); toast('Posted to your profile'); say('<p>Posted. Only the caption and artwork are public.</p>'); break;
-      case 'price-photo': await pricePhoto(el); break;
+      case 'price-photo': await cardPhoto(el, 'price'); break;
+      case 'card-photo': await cardPhoto(el, arg || 'price'); break;
       case 'price-decision': priceDecision(el); break;
       case 'price-again': lockActions(el); priceStart(); break;
       case 'order-fill': fillOrder(arg, '', ''); M.pending = 'order'; break;
@@ -3133,7 +3174,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   function openMori(promptKey) {
     if (P.current() !== 'mori') nav('mori');
     if (promptKey === 'memory') { input.value = MEMORY_TEMPLATE; input.focus(); input.setSelectionRange(0, 0); toast('Edit the details, then send'); return; }
-    if (promptKey === 'price') { priceStart(); return; }
+    if (promptKey === 'price' || promptKey === 'grade' || promptKey === 'add') { cardStart(promptKey); return; }
     if (promptKey === 'order') { orderStart(); return; }
     if (PROMPT_TEXT[promptKey]) send(PROMPT_TEXT[promptKey]);
   }
@@ -3546,8 +3587,9 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 <!-- Bindory demo: connect the wireframe to the real backend, without changing how it looks.
      - Its Log in / Sign up sheet signs in for real (Supabase: Google, or a 6-digit email code),
        then hands back to the wireframe's own flow (onboarding for sign up, welcome back for log in).
-     - When you're signed in, what you type to Ask Mori goes to the real Mori agent (/api/mori-chat),
-       and replies are drawn with the wireframe's own chat bubbles and confirmation card.
+     - When you're signed in, everything you type or tap in Ask Mori (shortcuts, suggestions and the
+       Take a photo option) goes to the real Mori agent (/api/mori-chat), and replies are drawn with the
+       wireframe's own chat bubbles and confirmation card.
      Everything else is the wireframe's own markup, styles and script. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
 <script>
@@ -3657,6 +3699,13 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       head = "<small>New binder · Private</small><b>" + esc(p.name) + "</b>";
       art = '<div style="display:flex;gap:6px;overflow-x:auto;margin:8px 0">' + (p.cards || []).map((c) => (cardImg(c) ? '<img src="' + esc(cardImg(c)) + '" alt="' + esc(c.name) + '" style="height:84px;border-radius:6px">' : "")).join("") + "</div>";
       rows = row("Cards", String((p.cards || []).length)) + (p.description ? row("About", p.description) : "");
+    } else if (p.tool === "set_order") {
+      const buy = p.side === "buy";
+      head = "<small>" + (buy ? "Buy order" : "Sell order") + " · price alert</small><b>" + esc(p.card.name) + "</b>";
+      art = cardImg(p.card) ? '<div class="cp-mori-ident"><img src="' + esc(cardImg(p.card)) + '" alt=""><div><small>' + esc(p.card.set_name || "") + "</small><b>" + esc(p.card.name) + "</b></div></div>" : "";
+      rows = row(buy ? "Buy for up to" : "Sell for at least", "US$" + Number(p.price_usd).toLocaleString("en-US")) +
+        (p.market_usd ? row("Market price now", "US$" + Number(p.market_usd).toLocaleString("en-US") + " (TCGplayer)") : "") +
+        row("Watching", "Listings and collectors you follow") + row("Expires", "In 30 days") + (p.note ? row("Note", p.note) : "");
     } else if (p.tool === "save_memory") {
       head = "<small>New memory · Private</small><b>" + esc(p.title) + "</b>";
       rows = row("Story", p.story) + row("With", p.with_whom || "Not added", !p.with_whom) + row("Where", p.place || "Not added", !p.place) + row("When", p.date || "Not added", !p.date) + (p.card ? row("Card", p.card.name) : "");
@@ -3679,8 +3728,6 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   // Called from the wireframe's own route() (patched at build time) for free-typed messages.
   window.bdLiveRoute = async (text, ui) => {
     if (!(await fresh())) return false; // guests keep the wireframe's scripted Mori
-    // Making videos, story cards, recaps and covers is the wireframe's own Studio flow.
-    if (/\b(video|studio|story card|recap|cover)\b/i.test(text)) return false;
     const typing = ui.addMsg("mori", '<div class="cp-mori-typing"><i></i><i></i><i></i><span>Thinking</span></div>', "is-typing");
     const steps = [];
     let bubble = null, streamed = "";
@@ -3688,7 +3735,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       const res = await fetch("/api/mori-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify(ui.photo ? { message: text, demo_photo: "card" } : { message: text }),
       });
       if (!res.ok || !res.body) throw new Error("unavailable");
       const reader = res.body.getReader(), dec = new TextDecoder();
@@ -3914,7 +3961,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       });
       if (!res.ok) throw new Error("failed");
       const out = await res.json();
-      if (action === "confirm") { b.textContent = "Saved"; P.toast("Saved to your collection"); loadMyData(); }
+      if (action === "confirm") { b.textContent = "Saved"; P.toast("Saved"); loadMyData(); }
       const thread = b.closest("[data-mori-thread]");
       if (out.reply && thread) {
         const msg = document.createElement("div");
