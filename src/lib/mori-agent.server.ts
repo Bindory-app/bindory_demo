@@ -34,7 +34,7 @@ type DB = SupabaseClient<Database>;
 const MODEL = process.env["AI_GATEWAY_MODEL"] || "google/gemini-2.5-flash";
 
 const SYSTEM = `You are Mori, a warm, concise Pokémon TCG collector agent inside the Bindory app. Keep replies short (2-5 sentences, or a short list), friendly, US English, sentence case. Use **bold** for card names and key numbers. Write money with thousands separators, e.g. US$2,211.14 or €1,810.68.
-You act through your tools: search_catalogue, get_card_prices, pre_grade_report, my_price_movers, get_set_cards, list_my_cards, find_related_cards, find_collectors, suggest_binder_for_card, add_card_to_collection, add_to_wishlist, create_binder, save_memory, set_order.
+You act through your tools: search_catalogue, get_card_prices, pre_grade_report, my_price_movers, get_set_cards, list_my_cards, list_my_orders, find_related_cards, find_collectors, suggest_binder_for_card, add_card_to_collection, add_to_wishlist, create_binder, save_memory, set_order.
 Rules:
 - Be proactive. When a request is open-ended (build a binder, complete my set, what to chase next, collectors who share my taste, trade-ups, value changes), start with list_my_cards and the other tools and come back with a concrete suggestion. Do not hand the work back to the collector; ask at most one short question, after you have suggested something.
 - Only list_my_cards says what the collector owns. Cards in earlier confirmation cards that were not confirmed are not in their collection.
@@ -44,7 +44,7 @@ Rules:
 - Prices: only quote prices from get_card_prices. Give one range in US$ (e.g. "**US$525 to US$615** raw, ungraded"); do not name marketplaces or data sources. If there is no price data, say so. You may estimate graded value only as a clearly labelled rough estimate based on the raw price, never as data.
 - Pre-grading (only when the collector asks for a pre-grade or whether to grade; never for a plain price check): only from photos you have seen; if there are no photos, ask for front and back photos. Identify the card, call get_card_prices, then call pre_grade_report exactly once with: the three most likely whole PSA-scale grades (e.g. 10, 9, 8, or 9, 8, 7; no half grades) with probabilities that add up to 100 and a short visible reason each; subgrade scores (0-100) for centering, corners, edges and surface as PSA, CGC, BGS and TAG would see them; the overall grade each company would likely give; your confidence (0-100, lower when glare or angle hides detail); a short notes line (e.g. "60/40 back · light corner whitening"); and Mori's take: start with a clear verdict ("Worth sending." or "Sell it raw." or "Keep it raw."), then one short sentence why, weighing the likely grade against the raw price and a typical grading fee plus shipping (about US$25-150). Be realistic: a PSA 10 is rarely the most likely outcome from photos. After pre_grade_report, reply with one short sentence at most (it already shows the full report).
 - Should I grade it (without new photos): compare the raw price range with the likely graded outcome after a typical grading fee, and recommend clearly.
-- Buy or sell orders: you need buy or sell, the card, and a price in US$. Ask for anything missing. Check get_card_prices so you can say how the price compares with the market, then call set_order. Orders are watch alerts in this demo: Mori notifies the collector when a matching listing appears; nothing is bought or sold automatically.
+- Buy or sell orders: you need buy or sell, the card, and a price in US$. Ask for anything missing. Check get_card_prices so you can say how the price compares with the market, then call set_order. Orders are watch alerts in this demo: Mori notifies the collector when a matching listing appears; nothing is bought or sold automatically. The collector can change buy/sell, the price and how long it stays open (7, 30 or 90 days) on the card before confirming. For their open orders, or to cancel one, call list_my_orders: the orders appear as cards with a Cancel button, so reply in one short line and never claim you cancelled an order yourself.
 - Trade-up challenge: use list_my_cards and get_card_prices to suggest trading two or three cards the collector owns toward one card they would love whose value is close to the combined value of what they give (roughly 80-110%), with the values from the tools.
 - Value changes (what went up or down in my collection): call my_price_movers once. Report the biggest risers (and any big fallers) as percentages with today's price range, and say it compares the last 7 days with the last 30 days. Do not name marketplaces.
 - Completing a set: use list_my_cards to find the set they own the most cards from, then get_set_cards for that set, and name a few of the cards they are missing (prefer notable ones).
@@ -210,6 +210,14 @@ const tools: NonNullable<ResponsesRequest["tools"]> = [
   },
   {
     type: "function",
+    name: "list_my_orders",
+    description:
+      "List the collector's own buy and sell orders (price alerts): card, side, price in US$, status and expiry.",
+    strict: false,
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    type: "function",
     name: "find_collectors",
     description: "Find other collectors with public profiles who share an interest.",
     strict: false,
@@ -358,6 +366,18 @@ async function runReadTool(db: DB, name: string, a: Args): Promise<unknown> {
       const { data, error } = await q;
       if (error) throw error;
       return data.length ? data : { results: [], note: "No matching cards in the collection" };
+    }
+    case "list_my_orders": {
+      // market_orders is created by setup/009 and is not in the generated types yet.
+      const { data, error } = await (db as unknown as SupabaseClient)
+        .from("market_orders")
+        .select("id, side, card_name, image_url, price_usd, status, expires_at, created_at")
+        .eq("status", "open")
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data?.length ? data : { results: [], note: "No open orders" };
     }
     case "my_price_movers": {
       const { data, error } = await db
@@ -719,6 +739,24 @@ export async function runMori(
             result = { shown_to_user: true, note: "The report is on screen." };
             stop = true;
           }
+        } else if (name === "list_my_orders") {
+          // Open orders are shown as cards with a Cancel button; Mori only summarises them.
+          result = await runReadTool(db, name, args).catch((e: unknown) => ({
+            error: e instanceof Error ? e.message : "Tool failed",
+          }));
+          if (Array.isArray(result) && result.length) {
+            rows.push({
+              role: "mori",
+              kind: "orders",
+              content: `${result.length} open order${result.length > 1 ? "s" : ""}`,
+              payload: { orders: result } as unknown as Json,
+            });
+            result = {
+              shown_to_user: true,
+              count: result.length,
+              note: 'The open orders are on screen as cards, each with a Cancel button. Reply in one short, warm line such as "Here are your open orders. Tap Cancel on any you no longer want." Do not list them again.',
+            };
+          }
         } else if (isWriteTool(name)) {
           const p = await buildProposal(db, userId, name, args);
           if ("error" in p) result = p;
@@ -795,7 +833,9 @@ export async function runMori(
 
   if (finalText) {
     // Put the reply before any confirmation card so it reads naturally.
-    const confirmAt = rows.findIndex((r) => r.kind === "confirm" || r.kind === "grade");
+    const confirmAt = rows.findIndex(
+      (r) => r.kind === "confirm" || r.kind === "grade" || r.kind === "orders",
+    );
     const reply = { role: "mori" as const, kind: "text", content: finalText };
     if (confirmAt >= 0) rows.splice(confirmAt, 0, reply);
     else rows.push(reply);

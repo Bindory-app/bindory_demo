@@ -30,8 +30,11 @@ export const Route = createFileRoute("/api/mori-confirm")({
           return new Response("Invalid confirmation", { status: 400 });
         try {
           const { confirmWith } = await import("@/lib/mori-confirm.server");
-          return Response.json(await confirmWith(db, messageId, action));
-        } catch {
+          const changes =
+            body && typeof body === "object" && "changes" in body ? body.changes : undefined;
+          return Response.json(await confirmWith(db, messageId, action, changes));
+        } catch (e) {
+          console.error("Mori confirm failed", e instanceof Error ? e.message : JSON.stringify(e));
           return new Response("Could not confirm", { status: 500 });
         }
       },

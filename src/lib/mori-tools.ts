@@ -26,6 +26,7 @@ export const TOOL_STATUS: Record<string, string> = {
   get_set_cards: "Looking through the set",
   my_price_movers: "Comparing this week’s prices with this month’s",
   set_order: "Preparing your order",
+  list_my_orders: "Checking your orders",
 };
 
 export const POINTS = { card_added: 10, memory_saved: 25 } as const;

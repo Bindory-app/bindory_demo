@@ -102,6 +102,15 @@
   const row = (k, v, muted) => "<li><small>" + esc(k) + "</small><b" + (muted ? ' class="is-muted"' : "") + ">" + esc(v) + "</b></li>";
   const cardImg = (c) => (c && /^https:\/\/assets\.tcgdex\.net\//.test(c.image || "") ? c.image : "");
 
+  // Order cards the collector can still change before confirming: id -> { side, price, days, ... }.
+  const orders = new Map();
+  const usdx = (n) => "US$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 2 });
+  const orderRows = (o) =>
+    row(o.side === "buy" ? "Buy for up to" : "Sell for at least", usdx(o.price)) +
+    (o.market ? row("Market price now", "About " + usdx(o.market)) : "") +
+    row("Watching", "Listings and collectors you follow") + row("Expires", "In " + o.days + " days") + (o.note ? row("Note", o.note) : "");
+  const orderHead = (o) => "<small>" + (o.side === "buy" ? "Buy order" : "Sell order") + " · price alert</small><b>" + esc(o.name) + "</b>";
+
   function proposalHTML(p, id) {
     const done = p.status !== "pending";
     let head = "", rows = "", art = "";
@@ -114,12 +123,11 @@
       art = '<div style="display:flex;gap:6px;overflow-x:auto;margin:8px 0">' + (p.cards || []).map((c) => (cardImg(c) ? '<img src="' + esc(cardImg(c)) + '" alt="' + esc(c.name) + '" style="height:84px;border-radius:6px">' : "")).join("") + "</div>";
       rows = row("Cards", String((p.cards || []).length)) + (p.description ? row("About", p.description) : "");
     } else if (p.tool === "set_order") {
-      const buy = p.side === "buy";
-      head = "<small>" + (buy ? "Buy order" : "Sell order") + " · price alert</small><b>" + esc(p.card.name) + "</b>";
+      const o = { side: p.side === "sell" ? "sell" : "buy", price: p.price_usd, days: p.expires_days || 30, market: p.market_usd, note: p.note, name: p.card.name };
+      if (!done) orders.set(id, o);
+      head = orderHead(o);
       art = cardImg(p.card) ? '<div class="cp-mori-ident"><img src="' + esc(cardImg(p.card)) + '" alt=""><div><small>' + esc(p.card.set_name || "") + "</small><b>" + esc(p.card.name) + "</b></div></div>" : "";
-      rows = row(buy ? "Buy for up to" : "Sell for at least", "US$" + Number(p.price_usd).toLocaleString("en-US")) +
-        (p.market_usd ? row("Market price now", "About US$" + Number(p.market_usd).toLocaleString("en-US")) : "") +
-        row("Watching", "Listings and collectors you follow") + row("Expires", "In 30 days") + (p.note ? row("Note", p.note) : "");
+      rows = orderRows(o);
     } else if (p.tool === "save_memory") {
       head = "<small>New memory · Private</small><b>" + esc(p.title) + "</b>";
       rows = row("Story", p.story) + row("With", p.with_whom || "Not added", !p.with_whom) + row("Where", p.place || "Not added", !p.place) + row("When", p.date || "Not added", !p.date) + (p.card ? row("Card", p.card.name) : "");
@@ -146,6 +154,13 @@
         continue;
       }
       if (r.kind === "confirm" && r.payload) last = ui.say(stepsHTML + proposalHTML(r.payload, r.id));
+      else if (r.kind === "orders" && r.payload && P.ordersListHTML) {
+        // Mori's one-line summary and the order cards share one bubble.
+        const list = P.ordersListHTML(r.payload.orders || []);
+        if (last && lastKind === "text") last.querySelector(".cp-mori-body").insertAdjacentHTML("beforeend", list);
+        else last = ui.say(stepsHTML + list);
+        if (last) refreshOrders(last);
+      }
       else if (r.kind === "grade" && r.payload && P.gradeReportHTML) {
         const [should, take] = P.gradeReportHTML(r.payload);
         // Mori's own intro line and the "Should I grade?" card share one bubble.
@@ -380,8 +395,81 @@
   }, true);
 
   window.bdLive.reload = loadMyData;
+  // Order alerts and the demo payment method (setup/010). Only a label is stored, never payment details.
+  const loadOrderSettings = async () => {
+    if (!session) return;
+    const { data } = await sb.from("order_settings").select("alert_push, alert_email, wallet").maybeSingle();
+    if (data) Object.assign(P.orderSettings || (P.orderSettings = {}), data);
+  };
+  app.addEventListener("cp:order-settings", async (e) => {
+    if (!(await fresh())) return;
+    const { error } = await sb.from("order_settings").upsert({ user_id: session.user.id, ...e.detail, updated_at: new Date().toISOString() });
+    if (error) console.warn("Order settings not saved", error.message);
+  });
+  fresh().then((s) => s && loadOrderSettings());
+  sb.auth.onAuthStateChange((event) => { if (event === "SIGNED_IN") setTimeout(loadOrderSettings, 0); });
   fresh().then((s) => s && loadMyData());
   sb.auth.onAuthStateChange((event) => { if (event === "SIGNED_IN") setTimeout(loadMyData, 0); });
+
+  // Order cards drawn from chat history may be out of date: mark ones already cancelled.
+  async function refreshOrders(el) {
+    const ids = [...el.querySelectorAll("[data-order-id]")].map((x) => x.dataset.orderId);
+    if (!ids.length) return;
+    const { data } = await sb.from("market_orders").select("id, status").in("id", ids);
+    (data || []).forEach((o) => { if (o.status !== "open") markCancelled(el.querySelector('[data-order-id="' + o.id + '"]')); });
+  }
+  function markCancelled(item) {
+    if (!item) return;
+    item.classList.remove("is-asking");
+    item.classList.add("is-cancelled");
+    item.querySelector(".cp-order-item-act").innerHTML = "<mark>Cancelled</mark>";
+  }
+  // Cancel on an open order: ask once, then cancel it (owner-only by RLS).
+  app.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-bd-order-cancel],[data-bd-order-yes],[data-bd-order-keep]");
+    if (!b || !app.contains(b)) return;
+    e.stopPropagation();
+    const item = b.closest("[data-order-id]"), act = item.querySelector(".cp-order-item-act");
+    if ("bdOrderCancel" in b.dataset) {
+      item.classList.add("is-asking");
+      act.innerHTML = "<p>Cancel this order?</p><button data-bd-order-keep>Keep it</button><button class=\"is-danger\" data-bd-order-yes>Yes, cancel</button>";
+      return;
+    }
+    if ("bdOrderKeep" in b.dataset) {
+      item.classList.remove("is-asking");
+      act.innerHTML = "<button data-bd-order-cancel>Cancel</button>";
+      return;
+    }
+    act.querySelectorAll("button").forEach((x) => (x.disabled = true));
+    await fresh();
+    const { error } = await sb.from("market_orders").update({ status: "cancelled" }).eq("id", item.dataset.orderId).eq("status", "open");
+    if (error) { act.querySelectorAll("button").forEach((x) => (x.disabled = false)); P.toast("Could not cancel that. Please try again."); return; }
+    markCancelled(item);
+    P.toast("Order cancelled");
+  });
+
+  // Change details on an order card opens an editor in the card; nothing is sent until Confirm.
+  app.addEventListener("click", (e) => {
+    const save = e.target.closest("[data-order-save],[data-order-cancel]");
+    if (!save || !app.contains(save)) return;
+    e.stopPropagation();
+    const card = save.closest(".cp-mori-confirm"), ed = save.closest("[data-order-edit]");
+    const id = card.querySelector("[data-bd-confirm]").dataset.bdConfirm, o = orders.get(id);
+    if ("orderSave" in save.dataset && o) {
+      const price = Number(ed.querySelector("[data-order-price]").value);
+      if (!(price > 0 && price <= 1000000)) { P.toast("Enter a price in US$"); return; }
+      o.side = ed.querySelector("[data-order-side].is-selected")?.dataset.orderSide === "sell" ? "sell" : "buy";
+      o.days = Number(ed.querySelector("[data-order-days].is-selected")?.dataset.orderDays) || 30;
+      o.price = Math.round(price * 100) / 100;
+      o.changed = true;
+      card.querySelector(".cp-mori-confirm-head").innerHTML = orderHead(o);
+      card.querySelector("ul").innerHTML = orderRows(o);
+      P.toast("Order updated. Tap Confirm to set it.");
+    }
+    ed.remove();
+    card.querySelector("ul").hidden = false;
+    card.querySelector(".cp-mori-actions").hidden = false;
+  });
 
   // Confirm / Change details on Mori's real proposals.
   app.addEventListener("click", async (e) => {
@@ -391,13 +479,22 @@
     const action = "bdConfirm" in b.dataset ? "confirm" : "edit";
     const id = b.dataset.bdConfirm || b.dataset.bdEdit;
     const box = b.closest(".cp-mori-actions");
+    const order = orders.get(id);
+    if (action === "edit" && order && P.orderEditorHTML) {
+      const card = b.closest(".cp-mori-confirm");
+      card.querySelector("ul").hidden = true;
+      box.hidden = true;
+      box.insertAdjacentHTML("afterend", P.orderEditorHTML(order));
+      card.querySelector("[data-order-price]").focus();
+      return;
+    }
     box.querySelectorAll("button").forEach((x) => (x.disabled = true));
     try {
       await fresh();
       const res = await fetch("/api/mori-confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
-        body: JSON.stringify({ messageId: id, action }),
+        body: JSON.stringify({ messageId: id, action, ...(order && order.changed ? { changes: { side: order.side, price_usd: order.price, expires_days: order.days } } : {}) }),
       });
       if (!res.ok) throw new Error("failed");
       const out = await res.json();
@@ -410,6 +507,17 @@
         msg.innerHTML = (faceEl ? faceEl.outerHTML : "") + '<div class="cp-mori-body"><p>' + fmt(out.reply.content) + "</p></div>";
         thread.append(msg);
         msg.scrollIntoView({ block: "end", behavior: "smooth" });
+      }
+      if (action === "confirm" && order) {
+        orders.delete(id);
+        if (P.orderNext) setTimeout(() => P.orderNext({ side: order.side, card: order.name, price: order.price, days: order.days }), 500);
+      }
+      if (action === "edit") {
+        // Other proposals: Mori asks what to change, and the next message makes a new card.
+        b.textContent = "Changing";
+        P.toast("Tell Mori what to change");
+        const q = document.querySelector("[data-mori-input]") || document.querySelector("#cp-app [data-screen='mori'] input[type='text'], #cp-app [data-screen='mori'] textarea");
+        if (q) q.focus();
       }
     } catch {
       box.querySelectorAll("button").forEach((x) => (x.disabled = false));

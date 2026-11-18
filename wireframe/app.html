@@ -1427,6 +1427,67 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 /* The Search page scrolls as one page (Shorts and Binders both flow; no fixed-height inner boxes). */
 #clickable-prototype section.cp-search-screen[data-screen="explore"]{overflow-x:hidden!important;overflow-y:auto!important;max-height:none!important;overscroll-behavior:contain}
 #clickable-prototype section.cp-search-screen[data-screen="explore"] .cp-binder-feed{max-height:none!important;overflow:visible!important;padding-bottom:12px}
+
+/* Order: Change details editor, next steps (alerts, payment method) and the summary. */
+#clickable-prototype .cp-order-edit{margin-top:8px;padding-top:8px;border-top:1px solid var(--mori-line)}
+#clickable-prototype .cp-order-edit>small,#clickable-prototype .cp-order-step>small{display:block;font-size:8px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#6853d3}
+#clickable-prototype .cp-order-seg{display:flex;gap:3px;margin:6px 0;padding:3px;border-radius:10px;background:#f1eeff}
+#clickable-prototype .cp-order-seg button{flex:1;border:0;background:none;padding:5px 0;border-radius:7px;font:inherit;font-size:10px;font-weight:750;color:var(--mori-muted);cursor:pointer}
+#clickable-prototype .cp-order-seg button.is-selected{background:#fff;color:var(--mori-ink);box-shadow:0 2px 6px rgba(60,40,140,.12)}
+#clickable-prototype .cp-order-edit label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;font-size:10px;font-weight:700;color:var(--mori-ink)}
+#clickable-prototype .cp-order-edit label em{display:flex;align-items:center;gap:2px;font-style:normal;font-weight:800;border:1px solid #ddd6fb;border-radius:9px;padding:0 8px;background:#fff;height:28px}
+#clickable-prototype .cp-order-edit input{width:72px;border:0;outline:0;background:none;font:inherit;font-size:12px;font-weight:800;color:var(--mori-ink);text-align:right}
+#clickable-prototype .cp-order-label{display:block;margin-top:6px;font-size:10px;font-weight:700;color:var(--mori-ink)}
+#clickable-prototype .cp-order-step{margin-top:6px;padding:10px;border-radius:13px;border:1px solid #dad5ff;background:linear-gradient(145deg,#f0edff,#fff)}
+#clickable-prototype .cp-order-step>b{display:block;margin:3px 0 4px;font-size:13px;line-height:1.2;color:#282540}
+#clickable-prototype .cp-order-step>p{margin:0 0 6px;font-size:10px;line-height:1.4;color:var(--mori-muted)}
+#clickable-prototype .cp-order-opt{display:flex;align-items:center;gap:8px;margin-top:6px;padding:8px 9px;border-radius:11px;background:#fff;border:1px solid #e6e1fb;cursor:pointer}
+#clickable-prototype .cp-order-opt input{position:absolute;opacity:0;pointer-events:none}
+#clickable-prototype .cp-order-opt span{flex:1;min-width:0}
+#clickable-prototype .cp-order-opt span b{display:block;font-size:11px;color:var(--mori-ink)}
+#clickable-prototype .cp-order-opt span em{display:block;font-style:normal;font-size:9px;color:var(--mori-muted)}
+#clickable-prototype .cp-order-opt>i{flex:none;position:relative;width:30px;height:18px;border-radius:99px;background:#d9d4ee;transition:background .2s}
+#clickable-prototype .cp-order-opt>i:after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .2s}
+#clickable-prototype .cp-order-opt input:checked~i{background:linear-gradient(135deg,#6250d8,#d98acc)}
+#clickable-prototype .cp-order-opt input:checked~i:after{transform:translateX(12px)}
+#clickable-prototype .cp-order-opt input:disabled~*{opacity:.6}
+#clickable-prototype .cp-order-wallets{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+#clickable-prototype .cp-order-wallets label{cursor:pointer}
+#clickable-prototype .cp-order-wallets input{position:absolute;opacity:0;pointer-events:none}
+#clickable-prototype .cp-order-wallets span{display:flex;align-items:center;gap:6px;height:100%;padding:8px;border-radius:11px;background:#fff;border:1.5px solid #e6e1fb}
+#clickable-prototype .cp-order-wallets span b{font-size:10px;line-height:1.2;color:var(--mori-ink)}
+#clickable-prototype .cp-order-wallets span i{flex:none;display:grid;place-items:center;width:20px;height:20px;border-radius:6px;font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#282540}
+#clickable-prototype .cp-order-wallets span i.is-google_pay{background:#4f7ce8}
+#clickable-prototype .cp-order-wallets span i.is-paypal{background:#2a5bb8}
+#clickable-prototype .cp-order-wallets span i.is-card{background:linear-gradient(135deg,#6250d8,#d98acc)}
+#clickable-prototype .cp-order-wallets span i.is-crypto{background:linear-gradient(135deg,#f6851b,#e2761b)}
+#clickable-prototype .cp-order-wallets span b em{display:block;font-style:normal;font-size:8px;font-weight:600;color:var(--mori-muted)}
+#clickable-prototype .cp-order-wallets input:checked+span{border-color:#6250d8;box-shadow:0 0 0 2px #6250d822}
+#clickable-prototype .cp-order-wallets input:disabled+span{opacity:.6}
+#clickable-prototype .cp-order-step>p.cp-order-demo{margin:7px 0 0;font-size:8.5px}
+#clickable-prototype .cp-order-done-head{display:flex;align-items:center;gap:8px}
+#clickable-prototype .cp-order-done-head>i{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;font-style:normal;font-size:13px;font-weight:900;color:#fff;background:linear-gradient(135deg,#6250d8,#d98acc)}
+#clickable-prototype .cp-order-done-head b{display:block;font-size:13px;margin-top:1px}
+
+/* Open orders list with Cancel. */
+#clickable-prototype .cp-order-list{display:grid;gap:6px;margin-top:6px}
+#clickable-prototype .cp-order-item{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px;border-radius:12px;border:1px solid #e6e1fb;background:#fff}
+#clickable-prototype .cp-order-item>img{width:34px;height:47px;border-radius:4px;object-fit:cover;flex:none}
+#clickable-prototype .cp-order-item>i{display:grid;place-items:center;width:34px;height:47px;border-radius:4px;background:#f1eeff;color:#6853d3;font-style:normal;flex:none}
+#clickable-prototype .cp-order-item>span{flex:1;min-width:0}
+#clickable-prototype .cp-order-item>span small{display:block;font-size:8px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#6853d3}
+#clickable-prototype .cp-order-item>span b{display:block;font-size:11.5px;color:var(--mori-ink);margin:1px 0}
+#clickable-prototype .cp-order-item>span em{display:block;font-style:normal;font-size:10px;font-weight:700;color:var(--mori-muted)}
+#clickable-prototype .cp-order-item-act{display:flex;align-items:center;gap:5px;flex:none}
+#clickable-prototype .cp-order-item-act button{border:1px solid #ddd6fb;background:#fff;color:var(--mori-ink);border-radius:99px;padding:5px 10px;font:inherit;font-size:9.5px;font-weight:800;cursor:pointer}
+#clickable-prototype .cp-order-item-act button.is-danger{background:#d64545;border-color:#d64545;color:#fff}
+#clickable-prototype .cp-order-item-act button:disabled{opacity:.5;cursor:default}
+#clickable-prototype .cp-order-item-act>p{width:100%;margin:0;font-size:9.5px;font-weight:700;color:var(--mori-ink)}
+#clickable-prototype .cp-order-item.is-asking .cp-order-item-act{width:100%;flex-wrap:wrap;justify-content:flex-end;padding-top:6px;border-top:1px solid var(--mori-line)}
+#clickable-prototype .cp-order-item.is-asking .cp-order-item-act>p{flex:1;width:auto}
+#clickable-prototype .cp-order-item.is-cancelled{opacity:.6}
+#clickable-prototype .cp-order-item.is-cancelled>span b{text-decoration:line-through}
+#clickable-prototype .cp-order-item-act>mark{background:#f1eeff;color:#6853d3;border-radius:99px;padding:4px 9px;font-size:9px;font-weight:800}
 </style>
 <section id="clickable-prototype" aria-label="Clickable Bindory prototype">
   <div class="cp-shell">
@@ -3296,6 +3357,89 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     say('<p>You are all set, ' + (window.bdFirstName || 'Wing') + '. Ask me anything, any time. I live in the middle of your navigation bar.</p>' + chips([...(pending ? [[M.afterAuth.label, act('after-auth')]] : []), ['Go to Home', act('onboard-done')], ...(pending ? [] : [['Add my first card', act('scan')]])]));
   }
 
+  /* ---- After an order is confirmed: alerts, then a payment method (demo only), then a summary ---- */
+  const WALLETS = [['card', 'Debit or credit card', '▭', ''], ['crypto', 'Crypto wallet', '◆', 'MetaMask and more'], ['paypal', 'PayPal', 'P', ''], ['google_pay', 'Google Pay', 'G', '']];
+  const walletName = k => (WALLETS.find(w => w[0] === k) || [0, 'Not added yet'])[1];
+  const usdExact = n => 'US$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
+  P.orderSettings = P.orderSettings || {};
+  const saveOrderSettings = s => { Object.assign(P.orderSettings, s); app.dispatchEvent(new CustomEvent('cp:order-settings', { detail: s })); };
+  let orderSeq = 0;
+  /* Change details on an order card: buy or sell, price and how long it stays open. */
+  P.orderEditorHTML = o => {
+    const seg = (key, list, on) => '<div class="cp-order-seg">' + list.map(([v, label]) => '<button type="button" data-order-' + key + '="' + v + '"' + (String(v) === String(on) ? ' class="is-selected"' : '') + '>' + label + '</button>').join('') + '</div>';
+    return '<div class="cp-order-edit" data-order-edit><small>Change details</small>' +
+      seg('side', [['buy', 'Buy'], ['sell', 'Sell']], o.side) +
+      '<label><span>' + (o.side === 'sell' ? 'Sell for at least' : 'Buy for up to') + '</span><em>US$<input type="number" inputmode="decimal" min="1" max="1000000" step="1" value="' + esc(o.price) + '" data-order-price></em></label>' +
+      '<span class="cp-order-label">Keep it open for</span>' + seg('days', [[7, '7 days'], [30, '30 days'], [90, '90 days']], o.days || 30) +
+      '<div class="cp-mori-actions"><button class="cp-mori-go" data-order-save>Save changes</button><button data-order-cancel>Cancel</button></div></div>';
+  };
+  const stepOpt = (name, title, sub, on) => '<label class="cp-order-opt"><input type="checkbox" data-order-alert="' + name + '"' + (on ? ' checked' : '') + '><span><b>' + title + '</b><em>' + sub + '</em></span><i aria-hidden="true"></i></label>';
+  function orderNext(o) {
+    L.order = o;
+    const s = P.orderSettings;
+    say('<p>Two quick steps so you never miss a match.</p><div class="cp-order-step"><small>Next step · 1 of 2</small><b>Get told the moment it matches</b>' +
+      stepOpt('push', 'Phone notification', 'Instantly, on this device', s.alert_push !== false) +
+      stepOpt('email', 'Email', 'To the address you signed in with', !!s.alert_email) +
+      '<div class="cp-mori-actions"><button class="cp-mori-go" ' + act('order-alerts') + '>Turn on alerts</button><button ' + act('order-alerts-skip') + '>Not now</button></div></div>');
+  }
+  P.orderNext = orderNext;
+  /* Open orders as cards, each with Cancel (asks once more before cancelling). */
+  P.ordersListHTML = list => '<div class="cp-order-list">' + list.map(o => {
+    const days = Math.max(0, Math.ceil((new Date(o.expires_at) - Date.now()) / 864e5));
+    const img = /^https:\/\/assets\.tcgdex\.net\//.test(o.image_url || '') ? o.image_url : '';
+    return '<div class="cp-order-item" data-order-id="' + esc(o.id) + '">' + (img ? '<img src="' + esc(img) + '" alt="">' : '<i aria-hidden="true">✦</i>') +
+      '<span><small>' + (o.side === 'sell' ? 'Sell order' : 'Buy order') + ' · ' + days + (days === 1 ? ' day' : ' days') + ' left</small><b>' + esc(o.card_name) + '</b><em>' + (o.side === 'sell' ? 'At least ' : 'Up to ') + usdExact(o.price_usd) + '</em></span>' +
+      '<div class="cp-order-item-act"><button data-bd-order-cancel>Cancel</button></div></div>';
+  }).join('') + '</div>';
+  function orderWallet() {
+    const buy = L.order.side !== 'sell', n = ++orderSeq, have = P.orderSettings.wallet;
+    say('<div class="cp-order-step"><small>Next step · 2 of 2</small><b>' + (buy ? 'Be ready to pay in one tap' : 'Choose how you get paid') + '</b>' +
+      '<p>' + (buy ? 'When a listing matches, you can buy it straight away, before someone else does.' : 'When a buyer meets your price, the money goes here.') + '</p>' +
+      '<div class="cp-order-wallets">' + WALLETS.map(([k, label, mark, sub], i) => '<label><input type="radio" name="cp-wallet-' + n + '" value="' + k + '"' + ((have ? k === have : i === 0) ? ' checked' : '') + '><span><i class="is-' + k + '">' + mark + '</i><b>' + label + (sub ? '<em>' + sub + '</em>' : '') + '</b></span></label>').join('') + '</div>' +
+      '<p class="cp-order-demo">Demo only. Nothing is charged and no payment details are collected.</p>' +
+      '<div class="cp-mori-actions"><button class="cp-mori-go" ' + act('order-wallet') + '>Connect</button><button ' + act('order-wallet-skip') + '>Skip for now</button></div></div>');
+  }
+  function orderDone() {
+    const o = L.order, s = P.orderSettings, buy = o.side !== 'sell';
+    const alerts = [s.alert_push && 'Phone', s.alert_email && 'Email'].filter(Boolean).join(' + ') || 'Off';
+    const li = (k, v) => '<li><small>' + k + '</small><b>' + esc(v) + '</b></li>';
+    say('<p>All set. Your order is live and I am watching for you.</p><div class="cp-mori-confirm cp-order-done"><div class="cp-order-done-head"><i aria-hidden="true">✓</i><span><small>' + (buy ? 'Buy order' : 'Sell order') + ' · live</small><b>' + esc(o.card) + '</b></span></div><ul>' +
+      li(buy ? 'Buy for up to' : 'Sell for at least', usdExact(o.price)) + li('Expires', 'In ' + (o.days || 30) + ' days') + li('Alerts', alerts) + li(buy ? 'Pay with' : 'Get paid to', s.wallet ? walletName(s.wallet) : 'Not added yet') +
+      '</ul></div>' + nextUp(['Show my open orders', 'Set another order', 'Price check a card']));
+  }
+  async function orderAlerts(el, on) {
+    lockActions(el);
+    const box = el.closest('.cp-order-step');
+    qsa('input', box).forEach(i => { i.disabled = true; });
+    let push = false, email = false;
+    if (on) {
+      push = qs('[data-order-alert="push"]', box).checked; email = qs('[data-order-alert="email"]', box).checked;
+      let blocked = false;
+      if (push && 'Notification' in window) { try { blocked = (await Notification.requestPermission()) === 'denied'; } catch { /* older browsers */ } }
+      if (blocked) push = false;
+      userSays(push && email ? 'Phone and email alerts' : push ? 'Phone notifications' : email ? 'Email alerts' : 'Not now');
+      saveOrderSettings({ alert_push: push, alert_email: email });
+      if (push || email) toast('Alerts on');
+      if (push && 'Notification' in window && Notification.permission === 'granted') { try { new Notification('Mori', { body: 'Alerts are on for ' + L.order.card + '. I will tell you as soon as a listing matches.' }); } catch { /* not allowed here */ } }
+      await think('', 450);
+      if (blocked) say('<p>Your browser blocked notifications, so ' + (email ? 'I will email you instead.' : 'turn them on in your browser settings whenever you like.') + '</p>');
+    } else { userSays('Not now'); await think('', 400); }
+    orderWallet();
+  }
+  async function orderWalletPick(el, on) {
+    lockActions(el);
+    const box = el.closest('.cp-order-step');
+    const w = (qs('input:checked', box) || {}).value;
+    qsa('input', box).forEach(i => { i.disabled = true; });
+    if (on && w) {
+      userSays('Connect ' + (w === 'crypto' ? 'my crypto wallet' : walletName(w)));
+      await think(w === 'crypto' ? 'Connecting MetaMask' : 'Connecting ' + walletName(w), 900);
+      saveOrderSettings({ wallet: w });
+      toast(walletName(w) + ' connected');
+    } else { userSays('Skip for now'); await think('', 400); }
+    orderDone();
+  }
+
   /* ---- Click handling ------------------------------------------------ */
   async function handleAct(el, a, arg) {
     switch (a) {
@@ -3328,7 +3472,11 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       case 'order-fill': fillOrder(arg, '', ''); M.pending = 'order'; break;
       case 'order-prefill': { lockActions(el); const [side, card, price] = arg.split('|'); orderStart(side, card, price); break; }
       case 'order-change': { lockActions(el); const o = M.order || {}; orderStart(o.side || 'buy', o.card || '', o.price ? String(o.price) : ''); break; }
-      case 'order-confirm': { lockActions(el); const o = M.order || {}; toast((o.side === 'sell' ? 'Sell' : 'Buy') + ' order set'); say('<p>Done. Your ' + (o.side === 'sell' ? 'sell' : 'buy') + ' order for <b>' + esc(o.card || 'this card') + '</b> is live. I will message you as soon as a listing matches.</p>'); break; }
+      case 'order-confirm': { lockActions(el); const o = M.order || {}; toast((o.side === 'sell' ? 'Sell' : 'Buy') + ' order set'); say('<p>Done. Your ' + (o.side === 'sell' ? 'sell' : 'buy') + ' order for <b>' + esc(o.card || 'this card') + '</b> is live. I will message you as soon as a listing matches.</p>'); await think('', 500); orderNext({ side: o.side || 'buy', card: o.card || 'this card', price: o.price || 0, days: 30 }); break; }
+      case 'order-alerts': await orderAlerts(el, true); break;
+      case 'order-alerts-skip': await orderAlerts(el, false); break;
+      case 'order-wallet': await orderWalletPick(el, true); break;
+      case 'order-wallet-skip': await orderWalletPick(el, false); break;
       case 'order': lockActions(el); toast(arg === 'sell' ? 'Sell order set' : 'Buy order set'); say('<p>Done. I will let you know as soon as a listing matches your ' + (arg === 'sell' ? 'sell' : 'buy') + ' order.</p>'); break;
       case 'remind': lockActions(el); toast('Reminder set'); say('<p>Done. I will remind you the day before.</p>'); break;
       case 'dismiss': lockActions(el); say('<p>No problem. Nothing was changed.</p>'); break;
@@ -3380,6 +3528,12 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     if ('moriReset' in d) { reset(); return; }
     if ('moriImage' in d) { if (M.attachment) clearAttachment(); else { setAttachment(M.pending === 'memory-details' && M.mem ? M.mem.got : scanCandidate()); input.focus(); } return; }
     if ('moriClearAttachment' in d) { clearAttachment(); return; }
+    if (d.orderSide || d.orderDays) {
+      // Buy/Sell and 7/30/90 days toggles in the order editor.
+      qsa('button', el.parentElement).forEach(b => b.classList.toggle('is-selected', b === el));
+      if (d.orderSide) { const lab = qs('label span', el.closest('[data-order-edit]')); if (lab) lab.textContent = d.orderSide === 'sell' ? 'Sell for at least' : 'Buy for up to'; }
+      return;
+    }
     if ('moriVoice' in d) { voice(el); return; }
     if (d.colTab) { L.colTab = d.colTab; renderCollection(); return; }
     if (d.cardPage !== undefined) { L.cardPage = Number(d.cardPage); renderCardResults(); return; }
@@ -3912,6 +4066,15 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   const row = (k, v, muted) => "<li><small>" + esc(k) + "</small><b" + (muted ? ' class="is-muted"' : "") + ">" + esc(v) + "</b></li>";
   const cardImg = (c) => (c && /^https:\/\/assets\.tcgdex\.net\//.test(c.image || "") ? c.image : "");
 
+  // Order cards the collector can still change before confirming: id -> { side, price, days, ... }.
+  const orders = new Map();
+  const usdx = (n) => "US$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 2 });
+  const orderRows = (o) =>
+    row(o.side === "buy" ? "Buy for up to" : "Sell for at least", usdx(o.price)) +
+    (o.market ? row("Market price now", "About " + usdx(o.market)) : "") +
+    row("Watching", "Listings and collectors you follow") + row("Expires", "In " + o.days + " days") + (o.note ? row("Note", o.note) : "");
+  const orderHead = (o) => "<small>" + (o.side === "buy" ? "Buy order" : "Sell order") + " · price alert</small><b>" + esc(o.name) + "</b>";
+
   function proposalHTML(p, id) {
     const done = p.status !== "pending";
     let head = "", rows = "", art = "";
@@ -3924,12 +4087,11 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       art = '<div style="display:flex;gap:6px;overflow-x:auto;margin:8px 0">' + (p.cards || []).map((c) => (cardImg(c) ? '<img src="' + esc(cardImg(c)) + '" alt="' + esc(c.name) + '" style="height:84px;border-radius:6px">' : "")).join("") + "</div>";
       rows = row("Cards", String((p.cards || []).length)) + (p.description ? row("About", p.description) : "");
     } else if (p.tool === "set_order") {
-      const buy = p.side === "buy";
-      head = "<small>" + (buy ? "Buy order" : "Sell order") + " · price alert</small><b>" + esc(p.card.name) + "</b>";
+      const o = { side: p.side === "sell" ? "sell" : "buy", price: p.price_usd, days: p.expires_days || 30, market: p.market_usd, note: p.note, name: p.card.name };
+      if (!done) orders.set(id, o);
+      head = orderHead(o);
       art = cardImg(p.card) ? '<div class="cp-mori-ident"><img src="' + esc(cardImg(p.card)) + '" alt=""><div><small>' + esc(p.card.set_name || "") + "</small><b>" + esc(p.card.name) + "</b></div></div>" : "";
-      rows = row(buy ? "Buy for up to" : "Sell for at least", "US$" + Number(p.price_usd).toLocaleString("en-US")) +
-        (p.market_usd ? row("Market price now", "About US$" + Number(p.market_usd).toLocaleString("en-US")) : "") +
-        row("Watching", "Listings and collectors you follow") + row("Expires", "In 30 days") + (p.note ? row("Note", p.note) : "");
+      rows = orderRows(o);
     } else if (p.tool === "save_memory") {
       head = "<small>New memory · Private</small><b>" + esc(p.title) + "</b>";
       rows = row("Story", p.story) + row("With", p.with_whom || "Not added", !p.with_whom) + row("Where", p.place || "Not added", !p.place) + row("When", p.date || "Not added", !p.date) + (p.card ? row("Card", p.card.name) : "");
@@ -3956,6 +4118,13 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
         continue;
       }
       if (r.kind === "confirm" && r.payload) last = ui.say(stepsHTML + proposalHTML(r.payload, r.id));
+      else if (r.kind === "orders" && r.payload && P.ordersListHTML) {
+        // Mori's one-line summary and the order cards share one bubble.
+        const list = P.ordersListHTML(r.payload.orders || []);
+        if (last && lastKind === "text") last.querySelector(".cp-mori-body").insertAdjacentHTML("beforeend", list);
+        else last = ui.say(stepsHTML + list);
+        if (last) refreshOrders(last);
+      }
       else if (r.kind === "grade" && r.payload && P.gradeReportHTML) {
         const [should, take] = P.gradeReportHTML(r.payload);
         // Mori's own intro line and the "Should I grade?" card share one bubble.
@@ -4190,8 +4359,81 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   }, true);
 
   window.bdLive.reload = loadMyData;
+  // Order alerts and the demo payment method (setup/010). Only a label is stored, never payment details.
+  const loadOrderSettings = async () => {
+    if (!session) return;
+    const { data } = await sb.from("order_settings").select("alert_push, alert_email, wallet").maybeSingle();
+    if (data) Object.assign(P.orderSettings || (P.orderSettings = {}), data);
+  };
+  app.addEventListener("cp:order-settings", async (e) => {
+    if (!(await fresh())) return;
+    const { error } = await sb.from("order_settings").upsert({ user_id: session.user.id, ...e.detail, updated_at: new Date().toISOString() });
+    if (error) console.warn("Order settings not saved", error.message);
+  });
+  fresh().then((s) => s && loadOrderSettings());
+  sb.auth.onAuthStateChange((event) => { if (event === "SIGNED_IN") setTimeout(loadOrderSettings, 0); });
   fresh().then((s) => s && loadMyData());
   sb.auth.onAuthStateChange((event) => { if (event === "SIGNED_IN") setTimeout(loadMyData, 0); });
+
+  // Order cards drawn from chat history may be out of date: mark ones already cancelled.
+  async function refreshOrders(el) {
+    const ids = [...el.querySelectorAll("[data-order-id]")].map((x) => x.dataset.orderId);
+    if (!ids.length) return;
+    const { data } = await sb.from("market_orders").select("id, status").in("id", ids);
+    (data || []).forEach((o) => { if (o.status !== "open") markCancelled(el.querySelector('[data-order-id="' + o.id + '"]')); });
+  }
+  function markCancelled(item) {
+    if (!item) return;
+    item.classList.remove("is-asking");
+    item.classList.add("is-cancelled");
+    item.querySelector(".cp-order-item-act").innerHTML = "<mark>Cancelled</mark>";
+  }
+  // Cancel on an open order: ask once, then cancel it (owner-only by RLS).
+  app.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-bd-order-cancel],[data-bd-order-yes],[data-bd-order-keep]");
+    if (!b || !app.contains(b)) return;
+    e.stopPropagation();
+    const item = b.closest("[data-order-id]"), act = item.querySelector(".cp-order-item-act");
+    if ("bdOrderCancel" in b.dataset) {
+      item.classList.add("is-asking");
+      act.innerHTML = "<p>Cancel this order?</p><button data-bd-order-keep>Keep it</button><button class=\"is-danger\" data-bd-order-yes>Yes, cancel</button>";
+      return;
+    }
+    if ("bdOrderKeep" in b.dataset) {
+      item.classList.remove("is-asking");
+      act.innerHTML = "<button data-bd-order-cancel>Cancel</button>";
+      return;
+    }
+    act.querySelectorAll("button").forEach((x) => (x.disabled = true));
+    await fresh();
+    const { error } = await sb.from("market_orders").update({ status: "cancelled" }).eq("id", item.dataset.orderId).eq("status", "open");
+    if (error) { act.querySelectorAll("button").forEach((x) => (x.disabled = false)); P.toast("Could not cancel that. Please try again."); return; }
+    markCancelled(item);
+    P.toast("Order cancelled");
+  });
+
+  // Change details on an order card opens an editor in the card; nothing is sent until Confirm.
+  app.addEventListener("click", (e) => {
+    const save = e.target.closest("[data-order-save],[data-order-cancel]");
+    if (!save || !app.contains(save)) return;
+    e.stopPropagation();
+    const card = save.closest(".cp-mori-confirm"), ed = save.closest("[data-order-edit]");
+    const id = card.querySelector("[data-bd-confirm]").dataset.bdConfirm, o = orders.get(id);
+    if ("orderSave" in save.dataset && o) {
+      const price = Number(ed.querySelector("[data-order-price]").value);
+      if (!(price > 0 && price <= 1000000)) { P.toast("Enter a price in US$"); return; }
+      o.side = ed.querySelector("[data-order-side].is-selected")?.dataset.orderSide === "sell" ? "sell" : "buy";
+      o.days = Number(ed.querySelector("[data-order-days].is-selected")?.dataset.orderDays) || 30;
+      o.price = Math.round(price * 100) / 100;
+      o.changed = true;
+      card.querySelector(".cp-mori-confirm-head").innerHTML = orderHead(o);
+      card.querySelector("ul").innerHTML = orderRows(o);
+      P.toast("Order updated. Tap Confirm to set it.");
+    }
+    ed.remove();
+    card.querySelector("ul").hidden = false;
+    card.querySelector(".cp-mori-actions").hidden = false;
+  });
 
   // Confirm / Change details on Mori's real proposals.
   app.addEventListener("click", async (e) => {
@@ -4201,13 +4443,22 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     const action = "bdConfirm" in b.dataset ? "confirm" : "edit";
     const id = b.dataset.bdConfirm || b.dataset.bdEdit;
     const box = b.closest(".cp-mori-actions");
+    const order = orders.get(id);
+    if (action === "edit" && order && P.orderEditorHTML) {
+      const card = b.closest(".cp-mori-confirm");
+      card.querySelector("ul").hidden = true;
+      box.hidden = true;
+      box.insertAdjacentHTML("afterend", P.orderEditorHTML(order));
+      card.querySelector("[data-order-price]").focus();
+      return;
+    }
     box.querySelectorAll("button").forEach((x) => (x.disabled = true));
     try {
       await fresh();
       const res = await fetch("/api/mori-confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
-        body: JSON.stringify({ messageId: id, action }),
+        body: JSON.stringify({ messageId: id, action, ...(order && order.changed ? { changes: { side: order.side, price_usd: order.price, expires_days: order.days } } : {}) }),
       });
       if (!res.ok) throw new Error("failed");
       const out = await res.json();
@@ -4220,6 +4471,17 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
         msg.innerHTML = (faceEl ? faceEl.outerHTML : "") + '<div class="cp-mori-body"><p>' + fmt(out.reply.content) + "</p></div>";
         thread.append(msg);
         msg.scrollIntoView({ block: "end", behavior: "smooth" });
+      }
+      if (action === "confirm" && order) {
+        orders.delete(id);
+        if (P.orderNext) setTimeout(() => P.orderNext({ side: order.side, card: order.name, price: order.price, days: order.days }), 500);
+      }
+      if (action === "edit") {
+        // Other proposals: Mori asks what to change, and the next message makes a new card.
+        b.textContent = "Changing";
+        P.toast("Tell Mori what to change");
+        const q = document.querySelector("[data-mori-input]") || document.querySelector("#cp-app [data-screen='mori'] input[type='text'], #cp-app [data-screen='mori'] textarea");
+        if (q) q.focus();
       }
     } catch {
       box.querySelectorAll("button").forEach((x) => (x.disabled = false));

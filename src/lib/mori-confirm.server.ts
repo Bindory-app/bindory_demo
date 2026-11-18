@@ -8,6 +8,7 @@ export async function confirmWith(
   db: SupabaseClient<Database>,
   messageId: string,
   action: "confirm" | "edit",
+  changes?: unknown,
 ) {
   const { data: msg, error } = await db
     .from("mori_messages")
@@ -34,6 +35,7 @@ export async function confirmWith(
       year: set?.releaseDate ? Number(set.releaseDate.slice(0, 4)) : null,
     };
   }
+  if (action === "confirm" && p.tool === "set_order") details = orderChanges(changes);
   const result = await db.rpc("confirm_mori_proposal", {
     p_message_id: messageId,
     p_action: action,
@@ -41,4 +43,19 @@ export async function confirmWith(
   });
   if (result.error) throw result.error;
   return result.data as unknown as { done: "confirmed" | "edited"; reply: MoriRow | null };
+}
+
+/** The collector's edits to an order card: buy or sell, a US$ price, and 7, 30 or 90 days. */
+export function orderChanges(c: unknown): Json | undefined {
+  if (!c || typeof c !== "object") return undefined;
+  const o = c as Record<string, unknown>;
+  const side = o["side"] === "buy" || o["side"] === "sell" ? o["side"] : undefined;
+  const price = Number(o["price_usd"]);
+  const days = Number(o["expires_days"]);
+  const out: Record<string, Json> = {};
+  if (side) out["side"] = side;
+  if (Number.isFinite(price) && price > 0 && price <= 1_000_000)
+    out["price_usd"] = Math.round(price * 100) / 100;
+  if (days === 7 || days === 30 || days === 90) out["expires_days"] = days;
+  return Object.keys(out).length ? out : undefined;
 }
