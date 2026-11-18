@@ -1412,6 +1412,16 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 #clickable-prototype .cp-shorts-grid>button>span em{margin-left:auto;font-style:normal;font-size:7.5px;opacity:.9}
 #clickable-prototype .cp-short-by{display:flex;align-items:center;gap:6px;margin:8px 0 0!important}
 #clickable-prototype .cp-short-by img{width:22px;height:22px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 1.5px #fff}
+
+/* Tall video tiles: sized with the padding technique (height 0 + padding 16/9 of the width) instead of
+   aspect-ratio, which some phone browsers mis-size inside the scaled app and grids that scroll. */
+#clickable-prototype .cp-shorts-grid{grid-auto-rows:max-content;align-items:start}
+#clickable-prototype .cp-shorts-grid>button,#clickable-prototype .cp-ig-reels button{aspect-ratio:auto;height:0;min-height:0;padding:0 0 177.78%}
+#clickable-prototype .cp-shorts-grid>button>img,#clickable-prototype .cp-ig-reels button>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#clickable-prototype .cp-ig-reels .cp-ig-reel-new{display:block}
+#clickable-prototype .cp-ig-reels button.cp-ig-reel-new>b,#clickable-prototype .cp-ig-reels button.cp-ig-reel-new>small{position:absolute;left:0;right:0;bottom:auto;text-align:center}
+#clickable-prototype .cp-ig-reels button.cp-ig-reel-new>b{top:34%}
+#clickable-prototype .cp-ig-reels button.cp-ig-reel-new>small{top:50%;padding:0 6px}
 </style>
 <section id="clickable-prototype" aria-label="Clickable Bindory prototype">
   <div class="cp-shell">
