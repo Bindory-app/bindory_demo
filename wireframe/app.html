@@ -1359,6 +1359,59 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 #clickable-prototype .cp-mori-body>.cp-mori-steps i{width:10px;height:10px}
 #clickable-prototype .cp-mori-chips [data-grade-detail]{border-color:transparent;background:linear-gradient(140deg,#6a52e6,#9a62ee);color:#fff;box-shadow:0 6px 14px rgba(94,72,214,.22)}
 #clickable-prototype .cp-mori-chips [data-grade-detail]:hover{color:#fff;filter:brightness(1.05)}
+
+/* My Profile: compact header (every element kept) so the details and binder highlights use under half the screen. */
+#clickable-prototype .cp-profile-screen{padding-top:6px}
+#clickable-prototype .cp-profile-screen .cp-top{margin-bottom:4px;height:28px;min-height:0}
+#clickable-prototype .cp-profile-screen .cp-ig-handle{font-size:14px}
+#clickable-prototype .cp-profile-screen .cp-profile-settings-icon{width:28px;height:28px;min-width:0;border-radius:9px}
+#clickable-prototype .cp-profile-screen .cp-ig-head{gap:12px;margin-bottom:4px;align-items:center}
+#clickable-prototype .cp-profile-screen .cp-avatar-edit{width:54px;height:54px;flex:0 0 54px}
+#clickable-prototype .cp-profile-screen .cp-avatar-edit img{width:54px!important;height:54px!important;min-height:0;max-height:none;aspect-ratio:1;object-fit:cover}
+#clickable-prototype .cp-profile-screen .cp-ig-stats b{font-size:15.5px;line-height:1.1}
+#clickable-prototype .cp-profile-screen .cp-ig-stats small{font-size:9px}
+#clickable-prototype .cp-profile-screen .cp-ig-name{min-height:0}
+#clickable-prototype .cp-profile-screen .cp-ig-name b{font-size:13.5px}
+#clickable-prototype .cp-profile-screen .cp-ig-name button{width:24px;height:24px;min-width:0}
+#clickable-prototype .cp-profile-screen .cp-ig-bio p{font-size:11px;line-height:1.35;margin-top:1px}
+#clickable-prototype .cp-profile-screen .cp-ig-bio .cp-ig-meta{font-size:9.5px;margin-top:2px}
+#clickable-prototype .cp-profile-screen .cp-ig-actions{margin-top:6px;gap:6px}
+#clickable-prototype .cp-profile-screen .cp-ig-actions button{height:24px;min-height:0;padding:4px 10px;font-size:10.5px}
+#clickable-prototype .cp-profile-screen .cp-ig-highlights{gap:10px;margin-top:8px;margin-bottom:2px;padding-bottom:2px}
+#clickable-prototype .cp-profile-screen .cp-ig-highlights button{width:48px}
+#clickable-prototype .cp-profile-screen .cp-ig-highlights span{width:40px;height:40px}
+#clickable-prototype .cp-profile-screen .cp-ig-highlights .cp-ig-new{font-size:17px}
+#clickable-prototype .cp-profile-screen .cp-ig-highlights small{margin-top:3px;font-size:8.5px}
+#clickable-prototype .cp-profile-screen .cp-ig-tabs{margin-top:2px}
+#clickable-prototype .cp-profile-screen .cp-ig-tabs button{padding:5px 0}
+#clickable-prototype .cp-profile-screen .cp-ig-tabs svg{width:17px;height:17px}
+
+/* Search: search bar beside the title, then Collectors and Content to explore (Shorts | Binders). */
+#clickable-prototype [data-screen="explore"] .cp-search-top{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:10px}
+#clickable-prototype [data-screen="explore"] .cp-search-top>div:first-child{flex:none}
+#clickable-prototype [data-screen="explore"] .cp-search-top h1{margin-bottom:0}
+#clickable-prototype [data-screen="explore"] .cp-search-top .cp-searchbar{flex:1;min-width:0;height:30px;min-height:0;margin:0 0 2px;padding:0 9px;gap:6px;border-radius:11px}
+#clickable-prototype [data-screen="explore"] .cp-search-top .cp-searchbar i{font-size:11px}
+#clickable-prototype [data-screen="explore"] .cp-search-top .cp-search-input{min-width:0;width:100%;font-size:9.5px;padding:0;height:100%}
+#clickable-prototype [data-screen="explore"] .cp-discovery-heading{margin-top:8px}
+#clickable-prototype .cp-explore-tabs{display:flex;gap:4px;margin:6px 0 8px;padding:3px;border-radius:11px;background:var(--mori-soft,#f1eeff)}
+#clickable-prototype .cp-explore-tabs button{flex:1;border:0;background:none;padding:5px 0;border-radius:8px;font:inherit;font-size:10.5px;font-weight:750;color:var(--mori-muted);cursor:pointer}
+#clickable-prototype .cp-explore-tabs button.is-selected{background:#fff;color:var(--mori-ink);box-shadow:0 2px 6px rgba(60,40,140,.12)}
+#clickable-prototype [data-screen="explore"][data-explore-tab="shorts"] .cp-binder-grid,#clickable-prototype [data-screen="explore"][data-explore-tab="shorts"] [data-search-empty]{display:none!important}
+#clickable-prototype [data-screen="explore"]:not([data-explore-tab="shorts"]) .cp-shorts-grid{display:none}
+#clickable-prototype .cp-shorts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;max-height:calc(255px + var(--bd-extra, 0px));overflow-y:auto;scrollbar-width:none;padding-bottom:6px}
+#clickable-prototype .cp-shorts-grid>button{position:relative;aspect-ratio:9/16;border:0;padding:0;border-radius:12px;overflow:hidden;background:var(--mori-soft);cursor:pointer}
+#clickable-prototype .cp-shorts-grid>button[hidden]{display:none}
+#clickable-prototype .cp-shorts-grid>button>img{width:100%;height:100%;object-fit:cover;display:block}
+#clickable-prototype .cp-shorts-grid>button:after{content:"";position:absolute;inset:auto 0 0 0;height:45%;background:linear-gradient(#0000,#000b);pointer-events:none}
+#clickable-prototype .cp-shorts-grid>button>i{position:absolute;top:6px;right:7px;font-style:normal;font-size:9px;color:#fff;text-shadow:0 1px 4px #0009;z-index:1}
+#clickable-prototype .cp-shorts-grid>button>small{position:absolute;top:6px;left:6px;padding:1px 5px;border-radius:99px;background:#0007;color:#fff;font-size:7.5px;font-weight:700;z-index:1}
+#clickable-prototype .cp-shorts-grid>button>span{position:absolute;left:6px;right:6px;bottom:6px;display:flex;align-items:center;gap:4px;z-index:1;color:#fff}
+#clickable-prototype .cp-shorts-grid>button>span img{width:15px;height:15px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 1px #fff}
+#clickable-prototype .cp-shorts-grid>button>span b{font-size:8.5px;font-weight:800}
+#clickable-prototype .cp-shorts-grid>button>span em{margin-left:auto;font-style:normal;font-size:7.5px;opacity:.9}
+#clickable-prototype .cp-short-by{display:flex;align-items:center;gap:6px;margin:8px 0 0!important}
+#clickable-prototype .cp-short-by img{width:22px;height:22px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 1.5px #fff}
 </style>
 <section id="clickable-prototype" aria-label="Clickable Bindory prototype">
   <div class="cp-shell">
@@ -3320,6 +3373,8 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     if (d.igTab) { L.igTab = d.igTab; renderProfileIG(); return; }
     if (d.igPost) { openPost(Number(d.igPost)); return; }
     if (d.igReel) { openReel(Number(d.igReel)); return; }
+    if (d.short) { openShort(Number(d.short)); return; }
+    if (d.exploreTab) { setExploreTab(d.exploreTab); return; }
     if ('igClose' in d) { postViewer.classList.remove('is-open'); return; }
     if ('roomCheckin' in d) { if (!S.checkedIn) { P.checkIn(); renderRoom(); } return; }
   });
@@ -3419,7 +3474,6 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     ideas.innerHTML = '<div class="cp-module-head"><b>Ideas from Mori</b></div><div class="cp-mori-ideas-row">' + IDEAS.map(i => '<button data-mori-ask="' + esc(i.ask) + '"><span class="cp-mori-idea-art"><img src="' + (i.cover ? IMG[i.cover] || '' : cardImg(i.img)) + '" alt=""></span><small>' + esc(i.kicker) + '</small><b>' + esc(i.title) + '</b></button>').join('') + '</div>';
   }
   const ex = screen('explore'), exInput = ex && qs('[data-search-input]', ex);
-  if (exInput) exInput.placeholder = 'Search collectors, binders or artists';
 
   /* ------------------------------------------------------------------ */
   /* My Profile: Instagram style, built around posts                     */
@@ -3461,6 +3515,52 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     postViewer.innerHTML = '<div class="cp-ig-viewer-card"><header><img src="' + (IMG.av1 || '') + '" alt=""><b>wingcollects</b><small>' + esc(p.kind) + '</small><button data-ig-close aria-label="Close">×</button></header><div class="cp-ig-viewer-art"><img src="' + postSrc(p) + '" alt="">' + (p.video ? '<i aria-hidden="true">▶</i>' : '') + '</div><p><b>wingcollects</b> ' + esc(p.caption) + '</p></div>';
     postViewer.classList.remove('is-reel'); postViewer.classList.add('is-open');
   }
+  /* ---- Search: Content to explore, as Shorts (collectors' videos) and Binders ---- */
+  const SHORTS = [
+    { img: 'cover-moonlight', owner: 'Mina', caption: 'Moonlit binder flip, page by page', views: '12.4k', length: '0:21' },
+    { card: 'umbreon', owner: 'Riley', caption: 'Pulled it at league night!', views: '8.9k', length: '0:14' },
+    { img: 'cover-softstudio', owner: 'Jess', caption: 'Pastel pages tour', views: '5.2k', length: '0:32' },
+    { card: 'charizard', owner: 'Leo', caption: 'Grading day: did it come back a 10?', views: '21k', length: '0:45' },
+    { img: 'cover-151j', owner: 'Arlo', caption: 'My 151 set, finally complete', views: '4.1k', length: '0:28' },
+    { img: 'cover-nightgallery', owner: 'Riley', caption: 'Night Gallery, slow pan', views: '3.6k', length: '0:19' },
+    { card: 'sylveon', owner: 'Ivy', caption: 'Trade-up challenge: three cards for one', views: '6.7k', length: '0:38' },
+    { img: 'cover-celestial', owner: 'Ivy', caption: 'Celestial Pages, set to music', views: '2.9k', length: '0:25' },
+    { card: 'gengar', owner: 'Kai', caption: 'Spooky alt arts I keep coming back to', views: '7.3k', length: '0:17' }
+  ].filter(x => (x.card ? cardImg(x.card) : IMG[x.img]) && COLLECTORS[x.owner]);
+  const shortSrc = x => (x.card ? cardImg(x.card) : IMG[x.img]) || '';
+  function openShort(i) {
+    const x = SHORTS[i]; if (!x) return;
+    const c = COLLECTORS[x.owner];
+    postViewer.innerHTML = '<div class="cp-reel-player"><img src="' + shortSrc(x) + '" alt=""><button class="cp-reel-close" data-ig-close aria-label="Close">×</button><i class="cp-reel-play" aria-hidden="true">▶</i>' +
+      '<div class="cp-reel-info"><span class="cp-reel-badge">Short</span><p class="cp-short-by"><img src="' + (IMG[c.img] || '') + '" alt=""><b>' + esc(c.full || x.owner) + '</b></p><p>' + esc(x.caption) + '</p><small>' + esc(x.views) + ' views · ' + esc(x.length) + '</small></div><span class="cp-reel-progress"><i></i></span></div>';
+    postViewer.classList.add('is-open', 'is-reel');
+  }
+  if (ex) {
+    // Search bar sits beside the title; "Suggested binders" becomes "Content to explore" with Shorts and Binders.
+    const top = qs('.cp-top', ex), bar = qs('.cp-searchbar', ex);
+    if (top && bar) { top.classList.add('cp-search-top'); top.append(bar); }
+    if (exInput) exInput.placeholder = 'Collectors, binders, artists';
+    const heading = qsa('.cp-discovery-heading', ex).find(h => /Suggested binders/.test(h.textContent));
+    if (heading) {
+      heading.innerHTML = '<b>Content to explore</b>';
+      heading.insertAdjacentHTML('afterend', '<div class="cp-explore-tabs" role="tablist"><button role="tab" data-explore-tab="shorts" class="is-selected" aria-selected="true">Shorts</button><button role="tab" data-explore-tab="binders" aria-selected="false">Binders</button></div>' +
+        '<div class="cp-shorts-grid" data-shorts>' + SHORTS.map((x, i) => {
+          const c = COLLECTORS[x.owner];
+          return '<button data-short="' + i + '" aria-label="' + esc(x.caption) + ', by ' + esc(x.owner) + '"><img src="' + shortSrc(x) + '" alt=""><i aria-hidden="true">▶</i><small>' + esc(x.length) + '</small>' +
+            '<span><img src="' + (IMG[c.img] || '') + '" alt=""><b>' + esc(x.owner) + '</b><em>' + esc(x.views) + '</em></span></button>';
+        }).join('') + '</div>');
+      ex.dataset.exploreTab = 'shorts';
+    }
+    if (exInput) exInput.addEventListener('input', () => {
+      const q = exInput.value.trim().toLowerCase();
+      qsa('[data-short]', ex).forEach(b => { const x = SHORTS[+b.dataset.short]; b.hidden = !!q && !(x.owner + ' ' + x.caption).toLowerCase().includes(q); });
+    });
+  }
+  function setExploreTab(t) {
+    ex.dataset.exploreTab = t;
+    qsa('[data-explore-tab]', ex).forEach(b => { const on = b.dataset.exploreTab === t; b.classList.toggle('is-selected', on); b.setAttribute('aria-selected', String(on)); });
+  }
+
   L.igTab = 'posts';
   if (prScreen) {
     const top = qs('.cp-top', prScreen);
