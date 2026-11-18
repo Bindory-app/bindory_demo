@@ -1553,6 +1553,20 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 #clickable-prototype input.cp-mem-input[type="datetime-local"]{min-width:150px}
 #clickable-prototype .cp-mem-trade-blank{display:grid;place-content:center;gap:4px;width:100%;aspect-ratio:63/88;border-radius:6px;background:linear-gradient(160deg,#e9e3ff,#f9e6f4);color:#6853d3;font-size:16px;text-align:center;box-shadow:0 4px 12px rgba(60,40,140,.18)}
 #clickable-prototype .cp-mem-trade-blank em{font-style:normal;font-size:8px;font-weight:800;padding:0 6px;color:var(--mori-ink)}
+
+/* Memory date: Day / Month / Year / Time dropdowns inside the card. */
+#clickable-prototype .cp-mem-datepick{margin:8px 0 2px;padding:8px;border-radius:11px;background:#fff;border:1px solid #ddd6fb;display:flex;flex-direction:column;gap:7px}
+#clickable-prototype .cp-mem-datepick>div{display:grid;grid-template-columns:.8fr 1fr 1.1fr 1.4fr;gap:5px}
+#clickable-prototype .cp-mem-datepick label{display:flex;flex-direction:column;gap:2px;min-width:0}
+#clickable-prototype .cp-mem-datepick small{font-size:7.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#6853d3}
+#clickable-prototype .cp-mem-datepick select{width:100%;min-width:0;height:26px;border:1px solid #ddd6fb;border-radius:8px;background:#f8f6ff;padding:0 4px;font:inherit;font-size:10px;font-weight:700;color:var(--mori-ink)}
+#clickable-prototype .cp-mem-datepick button{align-self:flex-end;border:0;border-radius:9px;padding:6px 14px;font:inherit;font-size:10px;font-weight:800;cursor:pointer;background:var(--mori-primary);color:#fff}
+#clickable-prototype .cp-mem-slot.is-editing{outline:2px solid #6250d8;outline-offset:1px}
+#clickable-prototype .cp-mem-datepick>div{grid-template-columns:.8fr 1fr 1.1fr}
+#clickable-prototype .cp-mem-datepick>div label:last-child{grid-column:1 / 3}
+#clickable-prototype .cp-mem-datepick select{-webkit-appearance:none;appearance:none;padding:0 16px 0 7px;background:#f8f6ff url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2710%27 height=%276%27%3E%3Cpath d=%27M1 1l4 4 4-4%27 fill=%27none%27 stroke=%27%236250d8%27 stroke-width=%271.6%27/%3E%3C/svg%3E") no-repeat right 5px center;font-size:10.5px}
+#clickable-prototype .cp-mem-datepick{position:relative}
+#clickable-prototype .cp-mem-datepick button{position:absolute;right:8px;bottom:8px;height:26px;padding:0 14px}
 </style>
 <section id="clickable-prototype" aria-label="Clickable Bindory prototype">
   <div class="cp-shell">
@@ -3619,22 +3633,20 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     const tpl = slot.closest('[data-mem-tpl]');
     if (tpl.classList.contains('is-done')) return;
     const isUser = slot.dataset.memPh === '@user', isDate = slot.dataset.memSlot === 'when';
+    if (isDate) { memDatePick(slot, tpl); return; }
     const inp = document.createElement('input');
     inp.className = 'cp-mem-input';
-    inp.type = isDate ? 'datetime-local' : 'text';
+    inp.type = 'text';
     inp.placeholder = slot.dataset.memSlot === 'when' ? 'e.g. 2 Nov 2026' : slot.dataset.memSlot.endsWith('num') ? 'e.g. 25/25' : slot.dataset.memPh;
-    inp.value = isDate ? (slot.dataset.memRaw || '') : (slot.dataset.memValue || (isUser ? '@' : ''));
+    inp.value = slot.dataset.memValue || (isUser ? '@' : '');
     inp.size = Math.max(6, (slot.dataset.memValue || slot.dataset.memPh).length);
     slot.hidden = true;
     slot.after(inp);
     inp.focus();
-    // The date opens the calendar (with time) straight away where the browser allows it.
-    if (isDate) { try { inp.showPicker(); } catch { /* opens on tap instead */ } }
     let done = false;
     const finish = next => {
       if (done) return; done = true;
       let v = inp.value.trim();
-      if (isDate && v) { slot.dataset.memRaw = v; v = memDateText(v); }
       if (isUser && v && !v.startsWith('@')) v = '@' + v;
       if (isUser && v === '@') v = '';
       if (v) { slot.dataset.memValue = v; slot.textContent = v; slot.classList.add('is-filled'); }
@@ -3649,15 +3661,42 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       }
     };
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } if (e.key === 'Escape') { inp.value = slot.dataset.memValue || ''; finish(false); } });
-    inp.addEventListener('blur', () => { if (isDate && !inp.value) return; finish(false); });
-    if (isDate) inp.addEventListener('change', () => { if (inp.value) finish(true); });
+    inp.addEventListener('blur', () => finish(false));
   }
-  // "2026-11-02T15:00" as "2 Nov 2026, 3:00 pm".
-  const memDateText = v => {
-    const d = new Date(v); if (isNaN(d)) return v;
-    const date = d.getDate() + ' ' + d.toLocaleString('en-US', { month: 'short' }) + ' ' + d.getFullYear();
-    return /T\d/.test(v) ? date + ', ' + d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase() : date;
-  };
+  const MEM_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const MEM_TIMES = ['Not sure'].concat(Array.from({ length: 36 }, (_, i) => {
+    const h = 6 + Math.floor(i / 2), m = i % 2 ? '30' : '00';
+    return (h % 12 || 12) + ':' + m + (h < 12 ? ' am' : ' pm');
+  }));
+  /* Day, month, year and time as small dropdowns in the card, then Done. */
+  function memDatePick(slot, tpl) {
+    if (qs('.cp-mem-datepick', tpl)) return;
+    const now = new Date(), was = slot.dataset.memRaw ? JSON.parse(slot.dataset.memRaw) : { d: now.getDate(), m: now.getMonth(), y: now.getFullYear(), t: 'Not sure' };
+    const sel = (key, opts, on, label) => '<label><small>' + label + '</small><select data-pick="' + key + '">' + opts.map(([v, t]) => '<option value="' + v + '"' + (String(v) === String(on) ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label>';
+    const years = Array.from({ length: 40 }, (_, i) => now.getFullYear() - i);
+    const box = document.createElement('div');
+    box.className = 'cp-mem-datepick';
+    box.innerHTML = '<div>' +
+      sel('d', Array.from({ length: 31 }, (_, i) => [i + 1, i + 1]), was.d, 'Day') +
+      sel('m', MEM_MONTHS.map((t, i) => [i, t]), was.m, 'Month') +
+      sel('y', years.map(y => [y, y]), was.y, 'Year') +
+      sel('t', MEM_TIMES.map(t => [t, t]), was.t, 'Time') +
+      '</div><button type="button" class="cp-mori-go" data-pick-done>Done</button>';
+    slot.classList.add('is-editing');
+    qs('.cp-mem-text', tpl).after(box);
+    box.querySelector('[data-pick-done]').addEventListener('click', e => {
+      e.stopPropagation();
+      const v = k => box.querySelector('[data-pick="' + k + '"]').value;
+      const pick = { d: +v('d'), m: +v('m'), y: +v('y'), t: v('t') };
+      slot.dataset.memRaw = JSON.stringify(pick);
+      slot.dataset.memValue = pick.d + ' ' + MEM_MONTHS[pick.m] + ' ' + pick.y + (pick.t !== 'Not sure' ? ', ' + pick.t : '');
+      slot.textContent = slot.dataset.memValue;
+      slot.classList.add('is-filled');
+      slot.classList.remove('is-editing');
+      box.remove();
+      memHint(tpl);
+    });
+  }
   function memText(tpl) {
     // The sentence, without optional parts left empty, plus any feelings and ratings.
     const sent = qs('.cp-mem-text', tpl).cloneNode(true);
