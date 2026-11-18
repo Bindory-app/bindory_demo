@@ -1424,6 +1424,9 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 #clickable-prototype .cp-ig-reels button.cp-ig-reel-new>small{top:50%;padding:0 6px}
 /* Shorts scroll with the whole Search page (no fixed-height inner box that cuts rows off). */
 #clickable-prototype .cp-shorts-grid{max-height:none;overflow:visible;padding-bottom:12px}
+/* The Search page scrolls as one page (Shorts and Binders both flow; no fixed-height inner boxes). */
+#clickable-prototype section.cp-search-screen[data-screen="explore"]{overflow-x:hidden!important;overflow-y:auto!important;max-height:none!important;overscroll-behavior:contain}
+#clickable-prototype section.cp-search-screen[data-screen="explore"] .cp-binder-feed{max-height:none!important;overflow:visible!important;padding-bottom:12px}
 </style>
 <section id="clickable-prototype" aria-label="Clickable Bindory prototype">
   <div class="cp-shell">
@@ -3568,6 +3571,12 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       qsa('[data-short]', ex).forEach(b => { const x = SHORTS[+b.dataset.short]; b.hidden = !!q && !(x.owner + ' ' + x.caption).toLowerCase().includes(q); });
     });
   }
+  // Binders load more when the page reaches the bottom (the feed used to be its own scroll box).
+  if (ex) ex.addEventListener('scroll', () => {
+    if (ex.dataset.exploreTab === 'binders' && ex.scrollTop + ex.clientHeight >= ex.scrollHeight - 40) {
+      const feed = qs('[data-binder-feed]', ex); if (feed) feed.dispatchEvent(new Event('scroll'));
+    }
+  }, { passive: true });
   function setExploreTab(t) {
     ex.dataset.exploreTab = t;
     qsa('[data-explore-tab]', ex).forEach(b => { const on = b.dataset.exploreTab === t; b.classList.toggle('is-selected', on); b.setAttribute('aria-selected', String(on)); });
@@ -3759,8 +3768,6 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   }
   body.bd-app #clickable-prototype .cp-phone::before, body.bd-app #clickable-prototype .cp-phone::after { display: none !important; }
   body.bd-app #clickable-prototype .cp-app { width: 318px !important; height: var(--bd-height, 594px) !important; min-height: 0 !important; border-radius: 0 !important; }
-  /* The wireframe sizes Search's binder list for its 594px-tall phone; give it the extra height of a taller screen. */
-  body.bd-app #clickable-prototype [data-screen="explore"] .cp-binder-feed { max-height: calc(255px + var(--bd-extra, 0px)) !important; }
   /* Tablets and desktops: a phone-sized app, centred, on the Bindory background. */
   body.bd-app.bd-wide #clickable-prototype .cp-shell { align-items: center; background: radial-gradient(circle at 30% 20%, #ece8ff, #f6f5fc 60%) !important; }
   body.bd-app.bd-wide #clickable-prototype .cp-app { border-radius: var(--bd-radius, 0px) !important; box-shadow: 0 20px 60px rgba(40, 30, 90, .18), 0 0 0 1px rgba(40, 30, 90, .06) !important; overflow: hidden; }
