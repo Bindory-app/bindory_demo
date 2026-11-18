@@ -23,6 +23,7 @@ export const writeSchemas = {
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional(),
     card_id: cardId.optional(),
+    traded_card_id: cardId.optional(),
     photo_path: text.optional(),
   }),
   set_order: z.object({

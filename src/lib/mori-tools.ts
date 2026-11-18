@@ -53,6 +53,7 @@ export type Proposal =
       with_whom?: string | undefined;
       date?: string | undefined;
       card?: ProposalCard | undefined;
+      traded_card?: ProposalCard | undefined;
       photo_path?: string | undefined;
     }
   | {

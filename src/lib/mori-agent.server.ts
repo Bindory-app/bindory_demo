@@ -58,7 +58,7 @@ Rules:
 - Completing a set: use list_my_cards to find the set they own the most cards from, then get_set_cards for that set, and name a few of the cards they are missing (prefer notable ones).
 - Collectors who share my taste: list_my_cards, then find_collectors, then call show_collectors with the 2-3 best matches and a one-line reason each, based on their bio and binders vs the collector's cards. They appear as profile cards the collector can open, so reply in one short line.
 - Trends and card shows: you have no live event listings or trend data. Say that plainly, then share two or three general, well-known collector trends or tips, labelled as general knowledge, and suggest where to check (local game stores, official Pokémon event locators, collector communities). Never invent specific events, dates or venues.
-- Memories: when the story already says who, where or when, call save_memory right away with a short title and what they told you. Ask one short question only if who and where are both missing. Never ask which exact card version; the card is optional (attach it only if search_catalogue finds one clear match). Photos are optional too. Keep the story in their words, including the card numbers, how they felt and any ratings they gave (e.g. "Felt nostalgic and lucky. Trade 5/5, @minacollects 5/5."); never drop the feelings, they matter more than the facts.
+- Memories: when the story already says who, where or when, call save_memory right away with a short title and what they told you. Ask one short question only if who and where are both missing. For a trade, look up both cards with search_catalogue (name and number) and pass card_id (the card they received) and traded_card_id (the card they gave). Never ask which exact card version; the cards are optional (attach it only if search_catalogue finds one clear match). Photos are optional too. Keep the story in their words, including the card numbers, how they felt and any ratings they gave (e.g. "Felt nostalgic and lucky. Trade 5/5, @minacollects 5/5."); never drop the feelings, they matter more than the facts.
 - Videos: when asked to plan or make a video, call list_my_cards, choose a theme yourself, then call plan_video with a title and 3-5 of their cards in order, each with a short caption. It shows a storyboard the collector can post or save, so reply in one short line and do not repeat the scenes. You cannot render story cards, recaps or binder covers in chat yet; say so in one line and plan them in text.
 - Writing tools (add_card_to_collection, add_to_wishlist, create_binder, save_memory, set_order) show the user a confirmation card with Confirm and Change buttons. Nothing is saved until they confirm. After calling one, do not claim it is saved.
 - For create_binder give every card a one-line reason. Only include cards the user already owns.
@@ -368,7 +368,10 @@ const tools: NonNullable<ResponsesRequest["tools"]> = [
         place: str("Where"),
         with_whom: str("Who they were with"),
         date: str("Date as YYYY-MM-DD if known"),
-        card_id: str("TCGdex card id if a card is involved"),
+        card_id: str(
+          "TCGdex id of the card the memory is about (in a trade: the card they received)",
+        ),
+        traded_card_id: str("In a trade: TCGdex id of the card they gave away"),
         photo_path: str("Photo path from an attached photo message"),
       },
       required: ["title", "story"],
@@ -568,11 +571,35 @@ async function priceMoves(ids: string[]) {
   return moves;
 }
 
+// "on 2 Nov 2026" in a memory template message, as YYYY-MM-DD.
+const MONTH_NUM: Record<string, string> = {
+  jan: "01",
+  feb: "02",
+  mar: "03",
+  apr: "04",
+  may: "05",
+  jun: "06",
+  jul: "07",
+  aug: "08",
+  sep: "09",
+  oct: "10",
+  nov: "11",
+  dec: "12",
+};
+function templateDate(message: string): string | undefined {
+  const m = /\bon (\d{1,2}) ([A-Za-z]{3})[a-z]* (\d{4})\b/.exec(message);
+  const mon = m?.[2] ? MONTH_NUM[m[2].toLowerCase()] : undefined;
+  return m && mon ? `${m[3]}-${mon}-${(m[1] ?? "").padStart(2, "0")}` : undefined;
+}
+const TEMPLATE_END = " Help me save this memory.";
+
 async function buildProposal(
   db: DB,
   userId: string,
   name: string,
   a: Args,
+  message = "",
+  seen: Set<string> = new Set(),
 ): Promise<Proposal | { error: string }> {
   if (!isWriteTool(name)) return { error: "Unknown tool" };
   const parsed = validateWriteArgs(name, a);
@@ -629,17 +656,26 @@ async function buildProposal(
   if (name === "save_memory") {
     if (!ownPhotoPath(s(a["photo_path"]), userId))
       return { error: "Photo must belong to the collector." };
+    // Cards are optional: keep only ones Mori actually looked up, so a guessed id never shows the wrong card.
     const cid = s(a["card_id"]);
-    const card = cid ? ((await briefCard(cid)) ?? undefined) : undefined;
-    if (cid && !card) return { error: "Card not found. Ask the collector to clarify." };
+    const tid = s(a["traded_card_id"]);
+    const card = cid && seen.has(cid) ? ((await briefCard(cid)) ?? undefined) : undefined;
+    const traded_card = tid && seen.has(tid) ? ((await briefCard(tid)) ?? undefined) : undefined;
+    // From the fill-in template, the story is exactly what the collector wrote (facts, feelings, ratings).
+    const fromTemplate = message.endsWith(TEMPLATE_END);
+    const story = fromTemplate
+      ? message.slice(0, -TEMPLATE_END.length).trim()
+      : (s(a["story"]) ?? "");
+    const date = s(a["date"]) ?? (fromTemplate ? templateDate(message) : undefined);
     return {
       tool: "save_memory",
       title: s(a["title"]) ?? "A memory",
-      story: s(a["story"]) ?? "",
+      story,
       place: s(a["place"]),
       with_whom: s(a["with_whom"]),
-      date: s(a["date"]),
+      date: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined,
       card,
+      traded_card,
       photo_path: s(a["photo_path"]),
     };
   }
@@ -1022,7 +1058,7 @@ export async function runMori(
               "Look this card up first with search_catalogue (name and number) and use the id it returns.",
           };
         } else if (isWriteTool(name)) {
-          const p = await buildProposal(db, userId, name, args);
+          const p = await buildProposal(db, userId, name, args, message, seenIds);
           if ("error" in p) result = p;
           else {
             const payload: ProposalPayload = { ...p, status: "pending" };

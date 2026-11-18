@@ -136,7 +136,12 @@
       rows = orderRows(o);
     } else if (p.tool === "save_memory") {
       head = "<small>New memory · Private</small><b>" + esc(p.title) + "</b>";
-      rows = row("Story", p.story) + row("With", p.with_whom || "Not added", !p.with_whom) + row("Where", p.place || "Not added", !p.place) + row("When", p.date ? niceDate(p.date) : "Not added", !p.date) + (p.card ? row("Card", p.card.name) : "");
+      // A trade shows both cards; otherwise the one card the memory is about.
+      if (p.traded_card && p.card && P.tradePairHTML)
+        art = P.tradePairHTML({ name: p.traded_card.name, image: cardImg(p.traded_card) }, { name: p.card.name, image: cardImg(p.card) });
+      else if (p.card && cardImg(p.card))
+        art = '<div class="cp-mori-ident"><img src="' + esc(cardImg(p.card)) + '" alt=""><div><small>' + esc(p.card.set_name || "") + "</small><b>" + esc(p.card.name) + "</b></div></div>";
+      rows = row("Story", p.story) + row("With", p.with_whom || "Not added", !p.with_whom) + row("Where", p.place || "Not added", !p.place) + row("When", p.date ? niceDate(p.date) : "Not added", !p.date) + (p.traded_card && p.card ? "" : p.card ? row("Card", p.card.name) : "");
     }
     return '<p>Here it is. Nothing is saved until you confirm.</p>' + art +
       '<div class="cp-mori-confirm"><div class="cp-mori-confirm-head">' + head + "</div><ul>" + rows + "</ul>" +

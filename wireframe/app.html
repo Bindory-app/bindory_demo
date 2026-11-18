@@ -1542,6 +1542,17 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 #clickable-prototype .cp-mem-rate{flex-wrap:wrap;row-gap:0}
 #clickable-prototype .cp-mem-rate>span:first-child{white-space:normal;flex:1 1 90px}
 #clickable-prototype .cp-mem-stars button{font-size:15px}
+
+/* Trade memory: both cards with a trade arrow. */
+#clickable-prototype .cp-mem-trade{display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0 8px;padding:10px;border-radius:13px;background:linear-gradient(145deg,#f0edff,#fff);border:1px solid #dad5ff}
+#clickable-prototype .cp-mem-trade figure{margin:0;flex:1;max-width:96px;text-align:center}
+#clickable-prototype .cp-mem-trade img{display:block;width:100%;aspect-ratio:63/88;object-fit:cover;border-radius:6px;box-shadow:0 4px 12px rgba(60,40,140,.18)}
+#clickable-prototype .cp-mem-trade figcaption{margin-top:5px;font-size:9px;font-weight:750;line-height:1.25;color:var(--mori-ink)}
+#clickable-prototype .cp-mem-trade figcaption small{display:block;font-size:7.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#6853d3}
+#clickable-prototype .cp-mem-trade>i{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;font-style:normal;font-size:15px;font-weight:900;color:#fff;background:linear-gradient(135deg,#6250d8,#d98acc);box-shadow:0 3px 10px rgba(98,80,216,.35)}
+#clickable-prototype input.cp-mem-input[type="datetime-local"]{min-width:150px}
+#clickable-prototype .cp-mem-trade-blank{display:grid;place-content:center;gap:4px;width:100%;aspect-ratio:63/88;border-radius:6px;background:linear-gradient(160deg,#e9e3ff,#f9e6f4);color:#6853d3;font-size:16px;text-align:center;box-shadow:0 4px 12px rgba(60,40,140,.18)}
+#clickable-prototype .cp-mem-trade-blank em{font-style:normal;font-size:8px;font-weight:800;padding:0 6px;color:var(--mori-ink)}
 </style>
 <section id="clickable-prototype" aria-label="Clickable Bindory prototype">
   <div class="cp-shell">
@@ -3437,6 +3448,12 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       '<div class="cp-mori-actions"><button class="cp-mori-go" ' + act('order-alerts') + '>Turn on alerts</button><button ' + act('order-alerts-skip') + '>Not now</button></div></div>');
   }
   P.orderNext = orderNext;
+  /* A trade memory: the card given and the card received, with a trade arrow between them. */
+  const tradeArt = c => c.image ? '<img src="' + esc(c.image) + '" alt="">' : '<span class="cp-mem-trade-blank" aria-hidden="true">✦<em>' + esc(c.name) + '</em></span>';
+  P.tradePairHTML = (gave, got) => '<div class="cp-mem-trade">' +
+    '<figure>' + tradeArt(gave) + '<figcaption><small>Gave</small>' + esc(gave.name) + '</figcaption></figure>' +
+    '<i aria-label="traded for">⇄</i>' +
+    '<figure>' + tradeArt(got) + '<figcaption><small>Got</small>' + esc(got.name) + '</figcaption></figure></div>';
   /* Collectors Mori matched, as the wireframe's profile cards (tap to open the profile). */
   P.peopleHTML = list => '<div class="cp-mori-people">' + list.map(x => {
     const key = Object.keys(COLLECTORS).find(n => COLLECTORS[n].full === x.name || n === String(x.name || '').split(' ')[0]);
@@ -3601,20 +3618,23 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   function memEdit(slot) {
     const tpl = slot.closest('[data-mem-tpl]');
     if (tpl.classList.contains('is-done')) return;
-    const isUser = slot.dataset.memPh === '@user';
+    const isUser = slot.dataset.memPh === '@user', isDate = slot.dataset.memSlot === 'when';
     const inp = document.createElement('input');
     inp.className = 'cp-mem-input';
-    inp.type = 'text';
+    inp.type = isDate ? 'datetime-local' : 'text';
     inp.placeholder = slot.dataset.memSlot === 'when' ? 'e.g. 2 Nov 2026' : slot.dataset.memSlot.endsWith('num') ? 'e.g. 25/25' : slot.dataset.memPh;
-    inp.value = slot.dataset.memValue || (isUser ? '@' : '');
+    inp.value = isDate ? (slot.dataset.memRaw || '') : (slot.dataset.memValue || (isUser ? '@' : ''));
     inp.size = Math.max(6, (slot.dataset.memValue || slot.dataset.memPh).length);
     slot.hidden = true;
     slot.after(inp);
     inp.focus();
+    // The date opens the calendar (with time) straight away where the browser allows it.
+    if (isDate) { try { inp.showPicker(); } catch { /* opens on tap instead */ } }
     let done = false;
     const finish = next => {
       if (done) return; done = true;
       let v = inp.value.trim();
+      if (isDate && v) { slot.dataset.memRaw = v; v = memDateText(v); }
       if (isUser && v && !v.startsWith('@')) v = '@' + v;
       if (isUser && v === '@') v = '';
       if (v) { slot.dataset.memValue = v; slot.textContent = v; slot.classList.add('is-filled'); }
@@ -3629,8 +3649,15 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       }
     };
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } if (e.key === 'Escape') { inp.value = slot.dataset.memValue || ''; finish(false); } });
-    inp.addEventListener('blur', () => finish(false));
+    inp.addEventListener('blur', () => { if (isDate && !inp.value) return; finish(false); });
+    if (isDate) inp.addEventListener('change', () => { if (inp.value) finish(true); });
   }
+  // "2026-11-02T15:00" as "2 Nov 2026, 3:00 pm".
+  const memDateText = v => {
+    const d = new Date(v); if (isNaN(d)) return v;
+    const date = d.getDate() + ' ' + d.toLocaleString('en-US', { month: 'short' }) + ' ' + d.getFullYear();
+    return /T\d/.test(v) ? date + ', ' + d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase() : date;
+  };
   function memText(tpl) {
     // The sentence, without optional parts left empty, plus any feelings and ratings.
     const sent = qs('.cp-mem-text', tpl).cloneNode(true);
@@ -4285,7 +4312,12 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       rows = orderRows(o);
     } else if (p.tool === "save_memory") {
       head = "<small>New memory · Private</small><b>" + esc(p.title) + "</b>";
-      rows = row("Story", p.story) + row("With", p.with_whom || "Not added", !p.with_whom) + row("Where", p.place || "Not added", !p.place) + row("When", p.date ? niceDate(p.date) : "Not added", !p.date) + (p.card ? row("Card", p.card.name) : "");
+      // A trade shows both cards; otherwise the one card the memory is about.
+      if (p.traded_card && p.card && P.tradePairHTML)
+        art = P.tradePairHTML({ name: p.traded_card.name, image: cardImg(p.traded_card) }, { name: p.card.name, image: cardImg(p.card) });
+      else if (p.card && cardImg(p.card))
+        art = '<div class="cp-mori-ident"><img src="' + esc(cardImg(p.card)) + '" alt=""><div><small>' + esc(p.card.set_name || "") + "</small><b>" + esc(p.card.name) + "</b></div></div>";
+      rows = row("Story", p.story) + row("With", p.with_whom || "Not added", !p.with_whom) + row("Where", p.place || "Not added", !p.place) + row("When", p.date ? niceDate(p.date) : "Not added", !p.date) + (p.traded_card && p.card ? "" : p.card ? row("Card", p.card.name) : "");
     }
     return '<p>Here it is. Nothing is saved until you confirm.</p>' + art +
       '<div class="cp-mori-confirm"><div class="cp-mori-confirm-head">' + head + "</div><ul>" + rows + "</ul>" +
