@@ -40,6 +40,7 @@ export type ResponsesRequest = {
   instructions?: string;
   input: ResponsesInputItem[];
   tools?: ResponsesFunctionTool[];
+  tool_choice?: "auto" | "required";
   max_output_tokens?: number;
 };
 

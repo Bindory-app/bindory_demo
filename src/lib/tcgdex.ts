@@ -25,6 +25,49 @@ export async function searchCards(name: string, limit = 24): Promise<CardBrief[]
   return data.slice(0, limit);
 }
 
+/** Find cards by name, optionally narrowed by card number ("58" or "58/102") and set name, with each
+ *  match's set so the right printing can be picked. */
+export async function findCards(
+  name: string,
+  number?: string,
+  set?: string,
+  limit = 10,
+): Promise<
+  { id: string; name: string; number: string; set: string; set_size?: number | undefined }[]
+> {
+  const q = name.trim();
+  if (!q) return [];
+  const [num, total] = (number ?? "").split("/").map((x) => x.trim());
+  const params = new URLSearchParams({ name: q, "pagination:itemsPerPage": "60" });
+  if (num) params.set("localId", num.replace(/^0+(?=\d)/, ""));
+  const res = await fetch(`${BASE}/cards?${params}`);
+  if (!res.ok) throw new Error(`TCGdex search failed (${res.status})`);
+  let list = (await res.json()) as CardBrief[];
+  // A number search matches exactly (TCGdex also returns e.g. 58 for 5), with or without leading zeros.
+  if (num)
+    list = list.filter((c) => c.localId.replace(/^0+(?=\d)/, "") === num.replace(/^0+(?=\d)/, ""));
+  // With a number the list is short: look up each card's set so "/102" or a set name can narrow it.
+  if (!num && !set)
+    return list
+      .slice(0, limit)
+      .map((c) => ({ id: c.id, name: c.name, number: c.localId, set: c.id.split("-")[0] ?? "" }));
+  const detailed = await Promise.all(list.slice(0, 20).map((c) => getCard(c.id).catch(() => null)));
+  let out = detailed
+    .filter((c): c is CardDetail => Boolean(c))
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      number: c.localId,
+      set: c.set.name,
+      set_size: c.set.cardCount?.official,
+    }));
+  if (total && out.some((c) => String(c.set_size) === total))
+    out = out.filter((c) => String(c.set_size) === total);
+  if (set && out.some((c) => c.set.toLowerCase().includes(set.toLowerCase())))
+    out = out.filter((c) => c.set.toLowerCase().includes(set.toLowerCase()));
+  return out.slice(0, limit);
+}
+
 export async function getCard(id: string): Promise<CardDetail | null> {
   const res = await fetch(`${BASE}/cards/${encodeURIComponent(id)}`);
   if (res.status === 404) return null;

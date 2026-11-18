@@ -111,7 +111,13 @@
     row("Watching", "Listings and collectors you follow") + row("Expires", "In " + o.days + " days") + (o.note ? row("Note", o.note) : "");
   const orderHead = (o) => "<small>" + (o.side === "buy" ? "Buy order" : "Sell order") + " · price alert</small><b>" + esc(o.name) + "</b>";
 
+  const proposals = new Map(); // id -> tool, for the next steps after Confirm
+  const niceDate = (d) => {
+    const t = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(d + "T12:00:00") : null;
+    return t && !isNaN(t) ? t.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : d;
+  };
   function proposalHTML(p, id) {
+    proposals.set(id, p.tool);
     const done = p.status !== "pending";
     let head = "", rows = "", art = "";
     if (p.tool === "add_card_to_collection" || p.tool === "add_to_wishlist") {
@@ -130,7 +136,7 @@
       rows = orderRows(o);
     } else if (p.tool === "save_memory") {
       head = "<small>New memory · Private</small><b>" + esc(p.title) + "</b>";
-      rows = row("Story", p.story) + row("With", p.with_whom || "Not added", !p.with_whom) + row("Where", p.place || "Not added", !p.place) + row("When", p.date || "Not added", !p.date) + (p.card ? row("Card", p.card.name) : "");
+      rows = row("Story", p.story) + row("With", p.with_whom || "Not added", !p.with_whom) + row("Where", p.place || "Not added", !p.place) + row("When", p.date ? niceDate(p.date) : "Not added", !p.date) + (p.card ? row("Card", p.card.name) : "");
     }
     return '<p>Here it is. Nothing is saved until you confirm.</p>' + art +
       '<div class="cp-mori-confirm"><div class="cp-mori-confirm-head">' + head + "</div><ul>" + rows + "</ul>" +
@@ -154,6 +160,23 @@
         continue;
       }
       if (r.kind === "confirm" && r.payload) last = ui.say(stepsHTML + proposalHTML(r.payload, r.id));
+      else if (r.kind === "people" && r.payload && P.peopleHTML) {
+        const cards = P.peopleHTML(r.payload.people || []);
+        if (last && lastKind === "text") last.querySelector(".cp-mori-body").insertAdjacentHTML("beforeend", cards);
+        else last = ui.say(stepsHTML + cards);
+      }
+      else if (r.kind === "video" && r.payload && P.videoPlanHTML) {
+        const board = P.videoPlanHTML(r.payload);
+        if (last && lastKind === "text") last.querySelector(".cp-mori-body").insertAdjacentHTML("beforeend", board);
+        else last = ui.say(stepsHTML + board);
+        videos.set(String(videos.size), r.payload);
+        last.querySelector("[data-video-plan]:not([data-video-key])")?.setAttribute("data-video-key", String(videos.size - 1));
+      }
+      else if (r.kind === "binders" && r.payload && P.binderPickHTML) {
+        const list = P.binderPickHTML(r.payload);
+        if (last && lastKind === "text") last.querySelector(".cp-mori-body").insertAdjacentHTML("beforeend", list);
+        else last = ui.say(stepsHTML + list);
+      }
       else if (r.kind === "orders" && r.payload && P.ordersListHTML) {
         // Mori's one-line summary and the order cards share one bubble.
         const list = P.ordersListHTML(r.payload.orders || []);
@@ -206,7 +229,7 @@
           if (ev.type === "status") { steps.push(ev.text); const label = typing.querySelector(".cp-mori-typing span"); if (label) label.textContent = ev.text; }
           if (ev.type === "text") {
             if (!bubble) { bubble = ui.say("<p></p>"); typing.after(bubble); }
-            streamed += ev.text; bubble.querySelector("p").innerHTML = fmt(streamed.replace(/(^|\n)[ \t*_]*suggestions?[ \t*_]*:[\s\S]*$/i, "")); ui.scrollDown();
+            streamed += ev.text; bubble.querySelector("p").innerHTML = fmt(streamed.replace(/(^|\n|(?<=[.?!])[ \t]+)[ \t*_]*suggestions?[ \t*_]*:[\s\S]*$/i, "")); ui.scrollDown();
           }
           if (ev.type === "error") throw new Error(ev.text);
           if (ev.type === "done") { typing.remove(); bubble?.remove(); bubble = null; renderRows(ev.rows, ui, steps); }
@@ -424,6 +447,56 @@
     item.classList.add("is-cancelled");
     item.querySelector(".cp-order-item-act").innerHTML = "<mark>Cancelled</mark>";
   }
+  // Post or save a video Mori storyboarded (posts table, owner-only by RLS).
+  const videos = new Map();
+  app.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-bd-video-post],[data-bd-video-draft]");
+    if (!b || !app.contains(b)) return;
+    e.stopPropagation();
+    const board = b.closest("[data-video-plan]"), v = videos.get(board.dataset.videoKey);
+    if (!v) return;
+    const pub = "bdVideoPost" in b.dataset;
+    board.querySelectorAll(".cp-mori-actions button").forEach((x) => (x.disabled = true));
+    await fresh();
+    const { error } = await sb.from("posts").insert({
+      user_id: session.user.id, kind: "video", caption: v.title, media_url: v.frames[0].image,
+      body: { frames: v.frames }, made_with_mori: true, is_public: pub,
+    });
+    if (error) { board.querySelectorAll(".cp-mori-actions button").forEach((x) => (x.disabled = false)); P.toast("Could not save that. Please try again."); return; }
+    b.textContent = pub ? "Posted" : "Saved";
+    P.toast(pub ? "Posted to your profile" : "Saved as a draft");
+    loadMyData();
+    const body = b.closest(".cp-mori-body");
+    body?.querySelectorAll(".cp-mori-next").forEach((x) => x.remove());
+    if (body && P.nextUpHTML) body.insertAdjacentHTML("beforeend", P.nextUpHTML(pub ? ["Plan another video", "Build a binder for these cards", "Which collectors share my taste?"] : ["Plan another video", "Build a binder for these cards"]));
+  });
+
+  // Add here on a binder Mori suggested: put the collector's own card into that binder.
+  app.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-bd-binder-add]");
+    if (!b || !app.contains(b)) return;
+    e.stopPropagation();
+    const item = b.closest("[data-binder-id]"), list = b.closest("[data-binder-card]");
+    const binderId = item.dataset.binderId, cardId = list.dataset.binderCard;
+    list.querySelectorAll("[data-bd-binder-add]").forEach((x) => (x.disabled = true));
+    await fresh();
+    const have = await sb.from("binder_cards").select("id").eq("binder_id", binderId).eq("card_id", cardId).limit(1);
+    let error = have.error;
+    const already = !error && have.data.length > 0;
+    if (!already && !error) {
+      ({ error } = await sb.from("binder_cards").insert({ user_id: session.user.id, binder_id: binderId, card_id: cardId, position: Number(item.dataset.binderCount) || 0 }));
+    }
+    if (error) { list.querySelectorAll("[data-bd-binder-add]").forEach((x) => (x.disabled = false)); P.toast("Could not add it. Please try again."); return; }
+    item.querySelector(".cp-order-item-act").innerHTML = "<mark>" + (already ? "Already here" : "Added") + "</mark>";
+    list.querySelectorAll("[data-bd-binder-add]").forEach((x) => x.closest(".cp-order-item").classList.add("is-done"));
+    const name = item.querySelector("b").textContent;
+    P.toast(already ? "It is already in " + name : "Added to " + name);
+    loadMyData();
+    const body = b.closest(".cp-mori-body");
+    body?.querySelectorAll(".cp-mori-next").forEach((x) => x.remove());
+    if (body && P.nextUpHTML) body.insertAdjacentHTML("beforeend", P.nextUpHTML(["Plan a video of this binder", "Price check this card", "Add another card"]));
+  });
+
   // Cancel on an open order: ask once, then cancel it (owner-only by RLS).
   app.addEventListener("click", async (e) => {
     const b = e.target.closest("[data-bd-order-cancel],[data-bd-order-yes],[data-bd-order-keep]");
@@ -507,6 +580,18 @@
         msg.innerHTML = (faceEl ? faceEl.outerHTML : "") + '<div class="cp-mori-body"><p>' + fmt(out.reply.content) + "</p></div>";
         thread.append(msg);
         msg.scrollIntoView({ block: "end", behavior: "smooth" });
+      }
+      // What to do next after each kind of confirmed card.
+      const NEXT = {
+        add_card_to_collection: ["Which binder should it go in?", "Log a memory about this card", "Price check this card"],
+        add_to_wishlist: ["Set a buy order for this card", "Price check this card", "What else should I chase?"],
+        create_binder: ["Plan a video of this binder", "Which collectors share my taste?", "Build another binder"],
+        save_memory: ["Log another memory", "Plan a video of my collection", "What card should I chase next?"],
+      };
+      const tool = proposals.get(id);
+      if (action === "confirm" && NEXT[tool] && P.nextUpHTML) {
+        const last = thread && [...thread.querySelectorAll(".cp-mori-mori .cp-mori-body")].pop();
+        if (last) last.insertAdjacentHTML("beforeend", P.nextUpHTML(NEXT[tool]));
       }
       if (action === "confirm" && order) {
         orders.delete(id);

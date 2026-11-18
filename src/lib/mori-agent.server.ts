@@ -15,6 +15,7 @@ import {
   getCardPricing,
   getSet,
   getSetCards,
+  findCards,
   searchCards,
   usdRange,
 } from "./tcgdex";
@@ -34,7 +35,14 @@ type DB = SupabaseClient<Database>;
 const MODEL = process.env["AI_GATEWAY_MODEL"] || "google/gemini-2.5-flash";
 
 const SYSTEM = `You are Mori, a warm, concise Pokémon TCG collector agent inside the Bindory app. Keep replies short (2-5 sentences, or a short list), friendly, US English, sentence case. Use **bold** for card names and key numbers. Write money with thousands separators, e.g. US$2,211.14 or €1,810.68.
-You act through your tools: search_catalogue, get_card_prices, pre_grade_report, my_price_movers, get_set_cards, list_my_cards, list_my_orders, find_related_cards, find_collectors, suggest_binder_for_card, add_card_to_collection, add_to_wishlist, create_binder, save_memory, set_order.
+Every answer ends with a concrete next step the collector can take in the app, never a dead end.
+- What to chase next: list_my_cards, pick the set or theme they collect most, get_set_cards for it, choose ONE specific card they are missing (prefer a notable one), get_card_prices for it, and in the same answer always call add_to_wishlist for that card (do not ask first; the collector confirms on the card). Your text: one or two sentences on why it fits, with today's price range.
+- Trendy collections: call market_trends and name the 2-3 cards or sets rising fastest, with the change in % and today's price range. Say which of them the collector already owns (list_my_cards).
+- Card shows: you cannot see live event listings. Say so in one line, suggest the official Pokemon event locator and local game stores, then in the same answer (call the tools before you write, never just promise to look) call list_my_cards and get_card_prices and name 2-3 of their cards worth bringing to trade or sell, with today's price range for each, plus one card to hunt for at the show that is NOT in list_my_cards (look it up with search_catalogue), and offer it as a wishlist card with add_to_wishlist.
+- Refer to other collectors by name, never as he or she.
+- Never suggest getting a card the collector already owns (check list_my_cards).
+"This card", "it" or "that one" means the card most recently discussed in this chat (from photos, a pre-grade report, a price check or an order). Use that card; never ask which card when one was just discussed.
+You act through your tools: search_catalogue, get_card_prices, pre_grade_report, my_price_movers, get_set_cards, list_my_cards, list_my_orders, market_trends, plan_video, show_collectors, find_related_cards, find_collectors, suggest_binder_for_card, add_card_to_collection, add_to_wishlist, create_binder, save_memory, set_order.
 Rules:
 - Be proactive. When a request is open-ended (build a binder, complete my set, what to chase next, collectors who share my taste, trade-ups, value changes), start with list_my_cards and the other tools and come back with a concrete suggestion. Do not hand the work back to the collector; ask at most one short question, after you have suggested something.
 - Only list_my_cards says what the collector owns. Cards in earlier confirmation cards that were not confirmed are not in their collection.
@@ -45,13 +53,13 @@ Rules:
 - Pre-grading (only when the collector asks for a pre-grade or whether to grade; never for a plain price check): only from photos you have seen; if there are no photos, ask for front and back photos. Identify the card, call get_card_prices, then call pre_grade_report exactly once with: the three most likely whole PSA-scale grades (e.g. 10, 9, 8, or 9, 8, 7; no half grades) with probabilities that add up to 100 and a short visible reason each; subgrade scores (0-100) for centering, corners, edges and surface as PSA, CGC, BGS and TAG would see them; the overall grade each company would likely give; your confidence (0-100, lower when glare or angle hides detail); a short notes line (e.g. "60/40 back · light corner whitening"); and Mori's take: start with a clear verdict ("Worth sending." or "Sell it raw." or "Keep it raw."), then one short sentence why, weighing the likely grade against the raw price and a typical grading fee plus shipping (about US$25-150). Be realistic: a PSA 10 is rarely the most likely outcome from photos. After pre_grade_report, reply with one short sentence at most (it already shows the full report).
 - Should I grade it (without new photos): compare the raw price range with the likely graded outcome after a typical grading fee, and recommend clearly.
 - Buy or sell orders: you need buy or sell, the card, and a price in US$. Ask for anything missing. Check get_card_prices so you can say how the price compares with the market, then call set_order. Orders are watch alerts in this demo: Mori notifies the collector when a matching listing appears; nothing is bought or sold automatically. The collector can change buy/sell, the price and how long it stays open (7, 30 or 90 days) on the card before confirming. For their open orders, or to cancel one, call list_my_orders: the orders appear as cards with a Cancel button, so reply in one short line and never claim you cancelled an order yourself.
-- Trade-up challenge: use list_my_cards and get_card_prices to suggest trading two or three cards the collector owns toward one card they would love whose value is close to the combined value of what they give (roughly 80-110%), with the values from the tools.
+- Trade-up challenge: list_my_cards, then my_price_movers for their prices. Pick 2-3 cards to give that are NOT their most valuable card. Find one card they would love (search_catalogue, matching their favourite set, Pokemon or artist) and call get_card_prices for it. Its typical price must be 80-110% of the combined value of the cards they give; if not, change the cards you give until it is. Show the maths in one short list (each card and its price, then the total vs the target price), then in the same answer call add_to_wishlist for the target card.
 - Value changes (what went up or down in my collection): call my_price_movers once. Report the biggest risers (and any big fallers) as percentages with today's price range, and say it compares the last 7 days with the last 30 days. Do not name marketplaces.
 - Completing a set: use list_my_cards to find the set they own the most cards from, then get_set_cards for that set, and name a few of the cards they are missing (prefer notable ones).
-- Collectors who share my taste: use list_my_cards, then find_collectors, and explain the match using each collector's bio and binders.
+- Collectors who share my taste: list_my_cards, then find_collectors, then call show_collectors with the 2-3 best matches and a one-line reason each, based on their bio and binders vs the collector's cards. They appear as profile cards the collector can open, so reply in one short line.
 - Trends and card shows: you have no live event listings or trend data. Say that plainly, then share two or three general, well-known collector trends or tips, labelled as general knowledge, and suggest where to check (local game stores, official Pokémon event locators, collector communities). Never invent specific events, dates or venues.
-- Before calling save_memory, ask short follow-up questions, one at a time, for anything missing: who they were with, where it happened, and whether they want to attach a photo. If they say skip, continue without it.
-- You cannot render videos, story cards, recaps or binder covers in chat yet. When asked, say so in one line, then plan it in the same reply, without asking whether they want a plan (never end with "Would you like me to..."): choose a theme yourself, pick 3-5 of their cards (from list_my_cards) to feature, in order, with a short caption for each, plus a title. Never claim you made the video, and do not include links.
+- Memories: when the story already says who, where or when, call save_memory right away with a short title and what they told you. Ask one short question only if who and where are both missing. Never ask which exact card version; the card is optional (attach it only if search_catalogue finds one clear match). Photos are optional too.
+- Videos: when asked to plan or make a video, call list_my_cards, choose a theme yourself, then call plan_video with a title and 3-5 of their cards in order, each with a short caption. It shows a storyboard the collector can post or save, so reply in one short line and do not repeat the scenes. You cannot render story cards, recaps or binder covers in chat yet; say so in one line and plan them in text.
 - Writing tools (add_card_to_collection, add_to_wishlist, create_binder, save_memory, set_order) show the user a confirmation card with Confirm and Change buttons. Nothing is saved until they confirm. After calling one, do not claim it is saved.
 - For create_binder give every card a one-line reason. Only include cards the user already owns.
 - Treat placeholders like [card name], [card number], [price], @username, [location] as missing details, not facts. Ask for the actual information.
@@ -65,11 +73,16 @@ const tools: NonNullable<ResponsesRequest["tools"]> = [
   {
     type: "function",
     name: "search_catalogue",
-    description: "Search the public TCGdex card catalogue by card name.",
+    description:
+      "Search the public TCGdex card catalogue. Always pass the card number when the collector gives one (e.g. 58/102), and the set name if known, so the exact printing is found.",
     strict: false,
     parameters: {
       type: "object",
-      properties: { name: str("Card name, e.g. Umbreon VMAX") },
+      properties: {
+        name: str("Card name only, e.g. Umbreon VMAX or Pikachu"),
+        number: str("Card number as printed, e.g. 58/102 or 215"),
+        set: str("Set name, e.g. Base Set or Evolving Skies"),
+      },
       required: ["name"],
     },
   },
@@ -210,6 +223,64 @@ const tools: NonNullable<ResponsesRequest["tools"]> = [
   },
   {
     type: "function",
+    name: "show_collectors",
+    description:
+      "Show 2-3 collectors from find_collectors as profile cards, each with why they match.",
+    strict: false,
+    parameters: {
+      type: "object",
+      properties: {
+        picks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              username: str("Username from find_collectors"),
+              why: str("One short reason they match"),
+            },
+            required: ["username", "why"],
+          },
+        },
+      },
+      required: ["picks"],
+    },
+  },
+  {
+    type: "function",
+    name: "plan_video",
+    description:
+      "Show a video storyboard from the collector's own cards (in order, with captions). They can post it to their profile or save it as a draft.",
+    strict: false,
+    parameters: {
+      type: "object",
+      properties: {
+        title: str("Short video title"),
+        scenes: {
+          type: "array",
+          description: "3-5 scenes, in order",
+          items: {
+            type: "object",
+            properties: {
+              card_id: str("TCGdex id of a card the collector owns"),
+              caption: str("Short on-screen caption"),
+            },
+            required: ["card_id", "caption"],
+          },
+        },
+      },
+      required: ["title", "scenes"],
+    },
+  },
+  {
+    type: "function",
+    name: "market_trends",
+    description:
+      "Price movement this week vs this month for popular chase cards across the market (real daily prices).",
+    strict: false,
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    type: "function",
     name: "list_my_orders",
     description:
       "List the collector's own buy and sell orders (price alerts): card, side, price in US$, status and expiry.",
@@ -230,7 +301,8 @@ const tools: NonNullable<ResponsesRequest["tools"]> = [
   {
     type: "function",
     name: "suggest_binder_for_card",
-    description: "Look at the user's existing binders to suggest where a card fits.",
+    description:
+      "Show the collector their binders so they can put a card they own into one (each binder gets an Add here button).",
     strict: false,
     parameters: {
       type: "object",
@@ -286,7 +358,7 @@ const tools: NonNullable<ResponsesRequest["tools"]> = [
     type: "function",
     name: "save_memory",
     description:
-      "Propose saving a collecting memory (user confirms). Ask for missing who/where/photo first.",
+      "Propose saving a collecting memory (user confirms). Who, where, date, card and photo are all optional.",
     strict: false,
     parameters: {
       type: "object",
@@ -322,10 +394,13 @@ async function briefCard(id: string, reason?: string): Promise<ProposalCard | nu
 async function runReadTool(db: DB, name: string, a: Args): Promise<unknown> {
   switch (name) {
     case "search_catalogue": {
-      const r = await searchCards(s(a["name"]) ?? "", 8);
+      const r = await findCards(s(a["name"]) ?? "", s(a["number"]), s(a["set"]));
       return r.length
-        ? r.map((c) => ({ id: c.id, name: c.name, number: c.localId }))
-        : { results: [], note: "No cards found" };
+        ? r
+        : {
+            results: [],
+            note: "No cards found. Try the name alone, or check the number with the collector.",
+          };
     }
     case "get_card_prices": {
       const r = await getCardPricing(s(a["card_id"]) ?? "");
@@ -387,22 +462,7 @@ async function runReadTool(db: DB, name: string, a: Args): Promise<unknown> {
         .limit(24);
       if (error) throw error;
       const ids = [...new Set(data.map((c) => c.tcgdex_id).filter(Boolean))];
-      const rows = await Promise.all(
-        ids.map(async (id) => {
-          const r = await getCardPricing(id).catch(() => null);
-          const cm = r?.pricing?.cardmarket as { avg7?: number; avg30?: number } | undefined;
-          if (!r || !cm?.avg7 || !cm.avg30) return null;
-          const range = usdRange(r.pricing);
-          return {
-            card: `${r.card.name} ${r.card.localId}`,
-            set: r.card.set.name,
-            change_pct: Math.round(((cm.avg7 - cm.avg30) / cm.avg30) * 1000) / 10,
-            price_now_usd: range ? `US$${range.low} to US$${range.high}` : undefined,
-          };
-        }),
-      );
-      const moves = rows.filter((x): x is NonNullable<typeof x> => x !== null);
-      moves.sort((x, y) => y.change_pct - x.change_pct);
+      const moves = await priceMoves(ids);
       return moves.length
         ? {
             compared: "7-day average price vs 30-day average price",
@@ -410,6 +470,12 @@ async function runReadTool(db: DB, name: string, a: Args): Promise<unknown> {
             moves,
           }
         : { results: [], note: "No price history for the cards in this collection" };
+    }
+    case "market_trends": {
+      const moves = await priceMoves(TREND_CARDS);
+      return moves.length
+        ? { compared: "7-day average price vs 30-day average price", moves }
+        : { results: [], note: "Market prices are unavailable right now. Try again shortly." };
     }
     case "get_set_cards": {
       const set = await getSetCards(s(a["set_id"]) ?? "");
@@ -451,6 +517,55 @@ async function runReadTool(db: DB, name: string, a: Args): Promise<unknown> {
     }
   }
   return { error: "Unknown tool" };
+}
+
+const NEEDS_DATA =
+  /card show|chase|trade-?up|trend|went up|went down|value|worth|price|complete .*set|share my taste|collectors|binder|video|orders?\b|my cards|my collection|add .* (?:to|into) my|wishlist/i;
+
+// Popular chase cards (checked in TCGdex) whose prices show where collectors are heading.
+const TREND_CARDS = [
+  "sv08.5-161",
+  "me02-125",
+  "sv03.5-199",
+  "swsh7-215",
+  "swsh12-186",
+  "sv08.5-156",
+  "sv04.5-234",
+  "sv08-238",
+  "sv03.5-201",
+  "swsh11-186",
+  "me01-180",
+  "sv09-184",
+  "sv08.5-167",
+];
+
+/** 7-day vs 30-day average price change for these cards, biggest rise first. A few lookups at a
+ *  time, retrying once, so a busy moment at TCGdex does not lose them all. */
+async function priceMoves(ids: string[]) {
+  // A few lookups at a time, retrying once, so a busy moment at TCGdex does not lose them all.
+  const lookup = (id: string) =>
+    getCardPricing(id).catch(() =>
+      new Promise((r) => setTimeout(r, 400)).then(() => getCardPricing(id).catch(() => null)),
+    );
+  const priced: Awaited<ReturnType<typeof lookup>>[] = [];
+  for (let i = 0; i < ids.length; i += 6)
+    priced.push(...(await Promise.all(ids.slice(i, i + 6).map(lookup))));
+  const rows = await Promise.all(
+    priced.map(async (r) => {
+      const cm = r?.pricing?.cardmarket as { avg7?: number; avg30?: number } | undefined;
+      if (!r || !cm?.avg7 || !cm.avg30) return null;
+      const range = usdRange(r.pricing);
+      return {
+        card: `${r.card.name} ${r.card.localId}`,
+        set: r.card.set.name,
+        change_pct: Math.round(((cm.avg7 - cm.avg30) / cm.avg30) * 1000) / 10,
+        todays_price_range_usd: range ? `US$${range.low} to US$${range.high}` : undefined,
+      };
+    }),
+  );
+  const moves = rows.filter((x): x is NonNullable<typeof x> => x !== null);
+  moves.sort((x, y) => y.change_pct - x.change_pct);
+  return moves;
 }
 
 async function buildProposal(
@@ -627,11 +742,19 @@ async function streamWithFallback(
   input: ResponsesInputItem[],
   signal: AbortSignal | undefined,
   oidcToken: string | null | undefined,
+  mustUseTool = false,
 ) {
   for (let i = 0; ; i++) {
     try {
       return await streamResponse(
-        { model: MODELS[i] ?? MODEL, instructions: SYSTEM, input, tools, max_output_tokens: 3000 },
+        {
+          model: MODELS[i] ?? MODEL,
+          instructions: SYSTEM,
+          input,
+          tools,
+          ...(mustUseTool ? { tool_choice: "required" as const } : {}),
+          max_output_tokens: 3000,
+        },
         { ...(signal ? { signal } : {}), oidcToken: oidcToken ?? null },
       );
     } catch (e) {
@@ -657,8 +780,13 @@ export async function runMori(
   const stored = images.length
     ? `${message}\n[Sent ${images.length} card photos: front and back]`
     : message;
-  const ins = await db.from("mori_messages").insert({ role: "user", content: stored });
+  const ins = await db
+    .from("mori_messages")
+    .insert({ role: "user", content: stored })
+    .select("created_at")
+    .single();
   if (ins.error) throw ins.error;
+  const askedAt = Date.parse(ins.data.created_at);
 
   const input: ResponsesInputItem[] = [
     ...past,
@@ -674,10 +802,22 @@ export async function runMori(
   ];
   const rows: { role: "mori"; kind: string; content: string; payload?: Json }[] = [];
   let finalText = "";
+  let lastCard = "";
+  // Card ids Mori has actually looked up in this chat, so it never proposes a card from a guessed id.
+  const seenIds = new Set<string>(
+    JSON.stringify(past).match(/[a-z0-9.]+-[a-z0-9]+(?=\\?")/gi) ?? [],
+  );
 
   try {
     for (let turn = 0; turn < 6; turn++) {
-      const stream = await streamWithFallback(input, signal, oidcToken);
+      // Questions about the collector's own cards, prices or plans must look at real data first,
+      // so the first step has to use a tool (the model sometimes answers from guesswork otherwise).
+      const stream = await streamWithFallback(
+        input,
+        signal,
+        oidcToken,
+        turn === 0 && NEEDS_DATA.test(message),
+      );
       let res: ResponsesResponse | undefined;
       for await (const event of stream) {
         if (event.type === "response.output_text.delta")
@@ -726,6 +866,7 @@ export async function runMori(
         let result: unknown;
         if (name === "pre_grade_report") {
           const report = gradeReport(args);
+          if (!("error" in report) && !report.card && lastCard) report.card = lastCard;
           if ("error" in report) result = report;
           else {
             rows.push({
@@ -738,6 +879,121 @@ export async function runMori(
             });
             result = { shown_to_user: true, note: "The report is on screen." };
             stop = true;
+          }
+        } else if (name === "show_collectors") {
+          // Only real public profiles; Mori supplies the reason.
+          const picks = (Array.isArray(args["picks"]) ? (args["picks"] as Args[]) : []).slice(0, 4);
+          const { data } = await db.rpc("list_public_collectors", { p_query: "" });
+          const all = (Array.isArray(data) ? data : []) as {
+            display_name?: string;
+            username?: string;
+            avatar_url?: string;
+          }[];
+          const people = picks
+            .map((x) => {
+              const c = all.find((o) => o.username === (s(x["username"]) ?? "").replace(/^@/, ""));
+              return c
+                ? {
+                    name: c.display_name ?? c.username,
+                    username: c.username,
+                    avatar: c.avatar_url ?? null,
+                    why: (s(x["why"]) ?? "").slice(0, 140),
+                  }
+                : null;
+            })
+            .filter((x): x is NonNullable<typeof x> => x !== null);
+          if (!people.length)
+            result = { error: "Use usernames exactly as find_collectors returned them." };
+          else {
+            rows.push({
+              role: "mori",
+              kind: "people",
+              content: `Collectors you may like: ${people.map((x) => x.name).join(", ")}`,
+              payload: { people } as unknown as Json,
+            });
+            result = {
+              shown_to_user: true,
+              note: "The profile cards are on screen. Reply in one short line.",
+            };
+          }
+        } else if (name === "plan_video") {
+          // Storyboard from the collector's own cards; they post or save it with a button.
+          const scenes = (Array.isArray(args["scenes"]) ? (args["scenes"] as Args[]) : []).slice(
+            0,
+            6,
+          );
+          const ids = scenes.map((x) => s(x["card_id"]) ?? "");
+          const { data: owned } = await db
+            .from("cards")
+            .select("tcgdex_id, name, image_url")
+            .in("tcgdex_id", ids.length ? ids : ["-"]);
+          const frames = scenes
+            .map((x) => {
+              const c = (owned ?? []).find((o) => o.tcgdex_id === s(x["card_id"]));
+              return c && c.image_url
+                ? {
+                    name: c.name,
+                    image: c.image_url,
+                    caption: (s(x["caption"]) ?? "").slice(0, 120),
+                  }
+                : null;
+            })
+            .filter((x): x is NonNullable<typeof x> => x !== null);
+          if (frames.length < 2)
+            result = { error: "Use 3-5 cards the collector owns (ids from list_my_cards)." };
+          else {
+            const title = (s(args["title"]) ?? "My collection").slice(0, 80);
+            rows.push({
+              role: "mori",
+              kind: "video",
+              content: `Video plan: ${title}`,
+              payload: { title, frames } as unknown as Json,
+            });
+            result = {
+              shown_to_user: true,
+              note: "The storyboard is on screen with Post to profile and Save draft buttons. Reply in one short line.",
+            };
+          }
+        } else if (name === "suggest_binder_for_card") {
+          // The collector picks the binder with an Add here button; Mori only suggests one.
+          result = await runReadTool(db, name, args).catch((e: unknown) => ({
+            error: e instanceof Error ? e.message : "Tool failed",
+          }));
+          const r = result as {
+            card?: { id: string; name: string } | null;
+            binders?: { id: string; name: string; binder_cards?: { count: number }[] }[];
+          };
+          const owned = r.card
+            ? await db.from("cards").select("id").eq("tcgdex_id", r.card.id).limit(1).maybeSingle()
+            : null;
+          if (!r.card) result = { error: "Card not found" };
+          else if (!owned?.data)
+            result = {
+              note: "This card is not in the collection yet. Offer to add it to the collection first.",
+            };
+          else if (!r.binders?.length)
+            result = {
+              note: "The collector has no binders yet. Offer to build one with this card.",
+            };
+          else {
+            rows.push({
+              role: "mori",
+              kind: "binders",
+              content: `Pick a binder for ${r.card.name}`,
+              payload: {
+                card: { name: r.card.name, owned_card_id: owned.data.id },
+                binders: r.binders.map((b) => ({
+                  id: b.id,
+                  name: b.name,
+                  count: b.binder_cards?.[0]?.count ?? 0,
+                })),
+              } as unknown as Json,
+            });
+            result = {
+              shown_to_user: true,
+              binders: r.binders.map((b) => ({ name: b.name })),
+              note: "The binders are on screen, each with an Add here button. In one or two short sentences, say which binder fits best and why. Never claim you added the card.",
+            };
           }
         } else if (name === "list_my_orders") {
           // Open orders are shown as cards with a Cancel button; Mori only summarises them.
@@ -757,6 +1013,14 @@ export async function runMori(
               note: 'The open orders are on screen as cards, each with a Cancel button. Reply in one short, warm line such as "Here are your open orders. Tap Cancel on any you no longer want." Do not list them again.',
             };
           }
+        } else if (
+          (name === "add_to_wishlist" || name === "add_card_to_collection") &&
+          !seenIds.has(s(args["card_id"]) ?? "")
+        ) {
+          result = {
+            error:
+              "Look this card up first with search_catalogue (name and number) and use the id it returns.",
+          };
         } else if (isWriteTool(name)) {
           const p = await buildProposal(db, userId, name, args);
           if ("error" in p) result = p;
@@ -776,6 +1040,19 @@ export async function runMori(
             error: e instanceof Error ? e.message : "Tool failed",
           }));
         }
+        // The card this answer is about, so the report and follow-ups can name it.
+        if (
+          name === "get_card_prices" &&
+          result &&
+          typeof result === "object" &&
+          "card" in result
+        ) {
+          const c = (result as { card: { name?: string; number?: string; set?: string } }).card;
+          if (c.name)
+            lastCard = `${c.name}${c.number ? ` ${c.number}` : ""}${c.set ? ` (${c.set})` : ""}`;
+        }
+        for (const m of JSON.stringify(result ?? null).matchAll(/"(?:id|tcgdex_id)":"([^"]+)"/g))
+          if (m[1]) seenIds.add(m[1]);
         statusRow.payload = {
           name,
           input: args as Json,
@@ -808,7 +1085,7 @@ export async function runMori(
     finalText = "I could not finish that request. Please try again.";
   // Pull out the follow-up questions Mori suggests (shown as buttons under the answer).
   let suggestions: string[] = [];
-  const tail = /(?:^|\n)[ \t*_]*suggestions?[ \t*_]*:(.*)$/is.exec(finalText);
+  const tail = /(?:^|\n|(?<=[.?!])[ \t]+)[ \t*_]*suggestions?[ \t*_]*:(.*)$/is.exec(finalText);
   if (tail) {
     suggestions = (tail[1] ?? "")
       .split(/\||\n/)
@@ -820,7 +1097,7 @@ export async function runMori(
     suggestions = [
       "Where can I send it for grading?",
       "What does grading cost?",
-      ...suggestions,
+      // "This card" is the card in the photos; Mori resolves it from the chat.
       "Price check this card",
     ];
   if (!suggestions.length)
@@ -830,20 +1107,32 @@ export async function runMori(
       "Start a trade-up challenge",
     ];
   suggestions = [...new Set(suggestions)].slice(0, 3);
+  // A confirmation card is the next step itself; follow-ups come after Confirm instead.
+  if (rows.some((r) => r.kind === "confirm")) suggestions = [];
 
   if (finalText) {
     // Put the reply before any confirmation card so it reads naturally.
     const confirmAt = rows.findIndex(
-      (r) => r.kind === "confirm" || r.kind === "grade" || r.kind === "orders",
+      (r) =>
+        r.kind === "confirm" ||
+        r.kind === "grade" ||
+        r.kind === "orders" ||
+        r.kind === "binders" ||
+        r.kind === "video" ||
+        r.kind === "people",
     );
     const reply = { role: "mori" as const, kind: "text", content: finalText };
     if (confirmAt >= 0) rows.splice(confirmAt, 0, reply);
     else rows.push(reply);
   }
-  rows.push({ role: "mori", kind: "suggest", content: "", payload: { suggestions } });
+  if (suggestions.length)
+    rows.push({ role: "mori", kind: "suggest", content: "", payload: { suggestions } });
+  // One insert gives every row the same time, and history is read back in time order, so give each
+  // row its own millisecond (after the question) to keep the answer in order next time.
+  const base = Math.max(Date.now(), Number.isFinite(askedAt) ? askedAt + 1 : 0);
   const out = await db
     .from("mori_messages")
-    .insert(rows)
+    .insert(rows.map((r, i) => ({ ...r, created_at: new Date(base + i).toISOString() })))
     .select("id, role, kind, content, payload, created_at");
   if (out.error) throw out.error;
   emit({ type: "done", rows: out.data });
