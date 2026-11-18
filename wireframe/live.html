@@ -132,15 +132,29 @@
   function renderRows(rows, ui, steps) {
     steps = [...new Set(steps)];
     let stepsHTML = steps.length ? '<ul class="cp-mori-steps">' + steps.map((s) => '<li class="is-done"><i></i><span>' + esc(s) + "</span></li>").join("") + "</ul>" : "";
+    let last = null, lastKind = "";
     for (const r of rows) {
       if (r.role !== "mori" || r.kind === "status") continue;
-      if (r.kind === "confirm" && r.payload) ui.say(stepsHTML + proposalHTML(r.payload, r.id));
+      if (r.kind === "suggest") {
+        // Follow-up questions go under the last bubble of this answer.
+        const list = (r.payload && r.payload.suggestions) || [];
+        if (list.length && P.nextUpHTML) {
+          if (last) last.querySelector(".cp-mori-body").insertAdjacentHTML("beforeend", P.nextUpHTML(list));
+          else ui.say(P.nextUpHTML(list));
+          ui.scrollDown();
+        }
+        continue;
+      }
+      if (r.kind === "confirm" && r.payload) last = ui.say(stepsHTML + proposalHTML(r.payload, r.id));
       else if (r.kind === "grade" && r.payload && P.gradeReportHTML) {
         const [should, take] = P.gradeReportHTML(r.payload);
-        ui.say(stepsHTML + (r.payload.card ? "<p>Here is how <b>" + esc(r.payload.card) + "</b> is likely to grade:</p>" : "") + should);
-        ui.say(take);
+        // Mori's own intro line and the "Should I grade?" card share one bubble.
+        if (last && lastKind === "text") last.querySelector(".cp-mori-body").insertAdjacentHTML("beforeend", should);
+        else ui.say(stepsHTML + should);
+        last = ui.say(take);
       }
-      else ui.say(stepsHTML + "<p>" + fmt(r.content) + "</p>");
+      else last = ui.say(stepsHTML + "<p>" + fmt(r.content) + "</p>");
+      lastKind = r.kind;
       stepsHTML = "";
     }
   }
@@ -173,10 +187,11 @@
         for (const line of lines) {
           if (!line) continue;
           const ev = JSON.parse(line);
-          if (ev.type === "status") { steps.push(ev.text); typing.querySelector("span").textContent = ev.text; }
+          // The status text goes in the typing bubble's label, never in Mori's avatar.
+          if (ev.type === "status") { steps.push(ev.text); const label = typing.querySelector(".cp-mori-typing span"); if (label) label.textContent = ev.text; }
           if (ev.type === "text") {
             if (!bubble) { bubble = ui.say("<p></p>"); typing.after(bubble); }
-            streamed += ev.text; bubble.querySelector("p").innerHTML = fmt(streamed); ui.scrollDown();
+            streamed += ev.text; bubble.querySelector("p").innerHTML = fmt(streamed.replace(/(^|\n)[ \t*_]*suggestions?[ \t*_]*:[\s\S]*$/i, "")); ui.scrollDown();
           }
           if (ev.type === "error") throw new Error(ev.text);
           if (ev.type === "done") { typing.remove(); bubble?.remove(); bubble = null; renderRows(ev.rows, ui, steps); }

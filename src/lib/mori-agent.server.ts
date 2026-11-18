@@ -56,7 +56,9 @@ Rules:
 - For create_binder give every card a one-line reason. Only include cards the user already owns.
 - Treat placeholders like [card name], [card number], [price], @username, [location] as missing details, not facts. Ask for the actual information.
 - Private memories are never shared or used to find other collectors.
-- There is no Pokémon companion feature; you are the collector's companion.`;
+- There is no Pokémon companion feature; you are the collector's companion.
+- Always end your reply with one last line in exactly this form: Suggestions: <question 1> | <question 2> | <question 3>
+  These are 2-3 short follow-ups the collector might tap next, written as the collector speaking (under 40 characters each), that you can actually help with. After a pre-grade report, include "Where can I send it for grading?" and "What does grading cost?".`;
 
 const str = (d: string) => ({ type: "string", description: d });
 const tools: NonNullable<ResponsesRequest["tools"]> = [
@@ -550,7 +552,10 @@ function gradeReport(a: Args) {
       ["centering", "corners", "edges", "surface"].map((k) => [
         k,
         Object.fromEntries(
-          Object.entries(block(subs[k], 0, 100)).map(([c, v]) => [c, v !== null && v <= 10 ? v * 10 : v]),
+          Object.entries(block(subs[k], 0, 100)).map(([c, v]) => [
+            c,
+            v !== null && v <= 10 ? v * 10 : v,
+          ]),
         ),
       ]),
     ),
@@ -574,16 +579,18 @@ async function history(db: DB, since?: string): Promise<ResponsesInputItem[]> {
     data.push(...page.data);
     if (page.data.length < 500) break;
   }
-  return data.map((m): ResponsesInputItem => {
-    if (m.role === "user") return { role: "user", content: m.content };
-    const text =
-      m.kind === "status"
-        ? `[Tool result: ${JSON.stringify(m.payload)}]`
-        : m.kind === "confirm"
-          ? `[Confirmation: ${JSON.stringify(m.payload)}]`
-          : m.content;
-    return { role: "assistant", content: [{ type: "output_text", text, annotations: [] }] };
-  });
+  return data
+    .filter((m) => m.kind !== "suggest")
+    .map((m): ResponsesInputItem => {
+      if (m.role === "user") return { role: "user", content: m.content };
+      const text =
+        m.kind === "status"
+          ? `[Tool result: ${JSON.stringify(m.payload)}]`
+          : m.kind === "confirm"
+            ? `[Confirmation: ${JSON.stringify(m.payload)}]`
+            : m.content;
+      return { role: "assistant", content: [{ type: "output_text", text, annotations: [] }] };
+    });
 }
 
 // The AI Gateway free tier allows only a few requests per minute per model provider, and one Mori
@@ -761,6 +768,31 @@ export async function runMori(
 
   if (!finalText && !rows.some((row) => row.kind === "confirm" || row.kind === "grade"))
     finalText = "I could not finish that request. Please try again.";
+  // Pull out the follow-up questions Mori suggests (shown as buttons under the answer).
+  let suggestions: string[] = [];
+  const tail = /(?:^|\n)[ \t*_]*suggestions?[ \t*_]*:(.*)$/is.exec(finalText);
+  if (tail) {
+    suggestions = (tail[1] ?? "")
+      .split(/\||\n/)
+      .map((x) => x.replace(/^[\s"'*•\-\d.)]+|[\s"'*]+$/g, ""))
+      .filter((x) => x.length > 2 && x.length <= 80);
+    finalText = finalText.slice(0, tail.index).trim();
+  }
+  if (rows.some((r) => r.kind === "grade"))
+    suggestions = [
+      "Where can I send it for grading?",
+      "What does grading cost?",
+      ...suggestions,
+      "Price check this card",
+    ];
+  if (!suggestions.length)
+    suggestions = [
+      "Price check a card",
+      "What card should I chase next?",
+      "Start a trade-up challenge",
+    ];
+  suggestions = [...new Set(suggestions)].slice(0, 3);
+
   if (finalText) {
     // Put the reply before any confirmation card so it reads naturally.
     const confirmAt = rows.findIndex((r) => r.kind === "confirm" || r.kind === "grade");
@@ -768,6 +800,7 @@ export async function runMori(
     if (confirmAt >= 0) rows.splice(confirmAt, 0, reply);
     else rows.push(reply);
   }
+  rows.push({ role: "mori", kind: "suggest", content: "", payload: { suggestions } });
   const out = await db
     .from("mori_messages")
     .insert(rows)

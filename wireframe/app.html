@@ -1336,6 +1336,29 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 #clickable-prototype .cp-grade-overall th,#clickable-prototype .cp-grade-overall td{border-top:1px solid var(--theme-e4e0f2,#e4e0f2);padding-top:6px}
 #clickable-prototype .cp-grade-overall td{font-size:10px;font-weight:800;color:#6a55d8}
 #clickable-prototype .cp-grade-notes{margin:6px 0 0!important;font-size:8.5px!important;color:var(--mori-muted)!important}
+
+/* Cleaner Ask Mori start screen: greeting at the top, bold shortcut cards, then Suggestions. */
+#clickable-prototype .cp-mori-screen.is-empty .cp-mori-thread{min-height:0;align-content:start;padding-top:6px}
+#clickable-prototype .cp-mori-screen.is-empty .cp-mori-hello{padding:4px 2px 0;gap:0;justify-items:start;text-align:left}
+#clickable-prototype .cp-mori-screen.is-empty .cp-mori-hello b{font-size:19px;line-height:1.2;letter-spacing:-.03em;max-width:none}
+#clickable-prototype .cp-mori-primary{grid-template-columns:1fr 1fr;gap:7px;margin-top:16px}
+#clickable-prototype .cp-mori-primary button{gap:8px;min-height:46px;padding:8px 9px;border:1px solid #e4def8;border-radius:14px;background:#fff;box-shadow:0 6px 16px rgba(94,72,214,.10),0 1px 2px rgba(94,72,214,.08);font-size:9.5px;font-weight:800;color:var(--mori-ink);white-space:normal;line-height:1.2;transition:transform .15s,box-shadow .15s,border-color .15s}
+#clickable-prototype .cp-mori-primary button:hover{transform:translateY(-1px);border-color:#cfc5fb;box-shadow:0 10px 22px rgba(94,72,214,.16);color:var(--mori-ink)}
+#clickable-prototype .cp-mori-primary button:active{transform:translateY(0)}
+/* Bindory brand gradient (violet #6250D8 to pink #D98ACC) on every shortcut icon */
+#clickable-prototype .cp-mori-primary button i{display:grid;place-items:center;flex:none;width:26px;height:26px;border-radius:9px;background:linear-gradient(135deg,#6250d8,#d98acc)}
+#clickable-prototype .cp-mori-primary button i svg{width:14px;height:14px;stroke:#fff}
+#clickable-prototype .cp-mori-ideas{margin-top:18px}
+/* Follow-up suggestions under an answer */
+#clickable-prototype .cp-mori-next{margin-top:10px;gap:5px}
+#clickable-prototype .cp-mori-next button{border:1px solid #ddd6fb;background:#f6f3ff;color:#5b47cf;border-radius:99px;padding:6px 10px;font-size:9.5px;font-weight:700}
+#clickable-prototype .cp-mori-next button:hover{background:#ece6ff}
+/* Quieter progress steps above answers */
+#clickable-prototype .cp-mori-body>.cp-mori-steps{margin:0 0 6px;gap:3px}
+#clickable-prototype .cp-mori-body>.cp-mori-steps li{font-size:9px;color:var(--mori-muted)}
+#clickable-prototype .cp-mori-body>.cp-mori-steps i{width:10px;height:10px}
+#clickable-prototype .cp-mori-chips [data-grade-detail]{border-color:transparent;background:linear-gradient(140deg,#6a52e6,#9a62ee);color:#fff;box-shadow:0 6px 14px rgba(94,72,214,.22)}
+#clickable-prototype .cp-mori-chips [data-grade-detail]:hover{color:#fff;filter:brightness(1.05)}
 </style>
 <section id="clickable-prototype" aria-label="Clickable Bindory prototype">
   <div class="cp-shell">
@@ -2513,7 +2536,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     ['price', 'Price check', 'prompt:price'],
     ['order', 'Set buy or sell order', 'prompt:order'],
     ['grade', 'Pre-grade assessment', 'prompt:grade'],
-    ['add', 'Add new cards to collection', 'prompt:add'],
+    ['add', 'Add cards to collection', 'prompt:add'],
     ['memory', 'Log a new memory'],
     ['tradeup', 'Trade-up challenge', 'Start a trade-up challenge']
   ];
@@ -2522,7 +2545,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     ['What card should I chase next?', 'Which collectors share my taste?', 'Plan a video of my collection', 'Which cards would complete my set?']
   ];
   const primaryButtons = () => '<div class="cp-mori-primary">' + PRIMARY.map(([icon, label, q]) =>
-    '<button ' + (!q ? 'data-mori-prompt="memory"' : q.startsWith('prompt:') ? 'data-mori-prompt="' + q.slice(7) + '"' : 'data-mori-ask="' + esc(q) + '"') + '>' + svg(icon) + '<span>' + esc(label) + '</span></button>').join('') + '</div>';
+    '<button class="is-' + icon + '" ' + (!q ? 'data-mori-prompt="memory"' : q.startsWith('prompt:') ? 'data-mori-prompt="' + q.slice(7) + '"' : 'data-mori-ask="' + esc(q) + '"') + '><i>' + svg(icon) + '</i><span>' + esc(label) + '</span></button>').join('') + '</div>';
   const suggestionRows = () => '<div class="cp-mori-ideas"><p class="cp-mori-ideas-head">' + svg('idea') + 'Suggestions</p>' +
     '<div class="cp-mori-marquee">' + SUGGESTIONS.map((row, i) => {
       const set = hidden => '<div class="cp-mori-marquee-set"' + (hidden ? ' aria-hidden="true"' : '') + '>' +
@@ -2531,7 +2554,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     }).join('') + '</div></div>';
   function renderEmpty() {
     thread.innerHTML =
-      '<div class="cp-mori-hello">' + face('cp-mori-face-xl') + '<b>' + (guest ? 'Hi, I am Mori.<br>What shall we do today?' : 'Hi ' + (window.bdFirstName || 'Wing') + ',<br>what shall we do today?') + '</b></div>' +
+      '<div class="cp-mori-hello"><b>' + (guest ? 'Hi, I am Mori.<br>What shall we do today?' : 'Hi ' + (window.bdFirstName || 'Wing') + ',<br>what shall we do today?') + '</b></div>' +
       primaryButtons() + suggestionRows();
     moriScreen.classList.add('is-empty');
   }
@@ -2610,6 +2633,8 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     if (/went up|gone up|movers|gainers/.test(t)) return movers();
     if (/chase/.test(t)) return related(findCard(text) || 'espeon');
     if (/share my taste/.test(t)) return discover();
+    if (/grading (cost|fee)|cost.*grad|how much.*grad/.test(t)) return gradingInfo(true);
+    if (/send.*grad|grading (company|companies|service|distributor)|where.*grad/.test(t)) return gradingInfo(false);
     if (/trade[- ]?up/.test(t)) return tradeUp();
     if (/card show|event|convention|fair\b/.test(t)) return cardShow();
     if (/\bgrade|psa|pre-?grad|condition/.test(t)) return preGrade(findCard(text) || 'charizard');
@@ -2811,14 +2836,15 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   /* Price check, pre-grade and add a card all start the same way: type the card, or send photos. */
   const CARD_START = {
     price: { ask: 'Which card should I price? Type the <b>card name and number</b> below, or take a photo of the front and back and I will identify it.', template: PRICE_TEMPLATE, example: 'Price check: Mega Charizard X ex 125/094' },
-    grade: { ask: 'Which card should I pre-grade? Photos of the <b>front and back</b> work best, on a dark, flat background. You can also type the card name and number.', template: 'Pre-grade: [card name] [card number]', example: 'Pre-grade: Mega Charizard X ex 125/094' },
+    grade: { ask: 'Send me photos of the <b>front and back</b> of your card, on a dark, flat background, and I will pre-grade it.' },
     add: { ask: 'Which card are you adding? Type the <b>card name and number</b>, or take a photo and I will identify it.', template: 'Add [card name] [card number] to my collection', example: 'Add Umbreon VMAX 215/203 to my collection' }
   };
   function cardStart(kind) {
     const k = CARD_START[kind];
     if (!isEmpty()) thread.insertAdjacentHTML('beforeend', '<hr class="cp-mori-divider">');
-    say('<p>' + k.ask + '</p><p class="cp-mori-sample">For example: ' + esc(k.example) + '</p>' +
+    say('<p>' + k.ask + '</p>' + (k.example ? '<p class="cp-mori-sample">For example: ' + esc(k.example) + '</p>' : '') +
       chips([['Take a photo', act('card-photo', kind)], ['Upload from my photos', act('card-photo', kind)]]));
+    if (!k.template) { M.pending = null; input.value = ''; return; }
     M.pending = kind;
     input.value = k.template; input.focus();
     const from = k.template.indexOf('['); input.setSelectionRange(from, k.template.indexOf(']', from) + 1); input.scrollLeft = 0;
@@ -2878,7 +2904,16 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     const [should, take] = gradeReportHTML(SAMPLE_GRADE);
     say('<p>This is <b>' + c.name + ' ' + c.number + '</b> from <i>' + c.set + '</i>. Here is how it is likely to grade:</p>' + should);
     await wait(500);
-    say(take);
+    say(take + nextUp(['Where can I send it for grading?', 'What does grading cost?', 'Price check this card']));
+  }
+  /* Follow-up questions Mori suggests at the end of an answer (tap to ask). */
+  const nextUp = list => '<div class="cp-mori-chips cp-mori-next">' + list.map(q => '<button ' + ask(q) + '>' + esc(q) + '</button>').join('') + '</div>';
+  P.nextUpHTML = nextUp;
+  async function gradingInfo(costs) {
+    await think(costs ? 'Checking grading fees' : 'Checking grading services', 800);
+    say(costs
+      ? '<p>Grading fees depend on the company, the service level and the card’s value. As a rough guide:</p><ul class="cp-mori-facts"><li><small>Bulk or value tiers</small><b>About US$20 to US$40 per card</b></li><li><small>Regular or express</small><b>About US$75 to US$150</b></li><li><small>Plus</small><b>Shipping and insurance both ways</b></li></ul><p class="cp-mori-sample">Typical ranges; check each company’s current fees.</p>' + nextUp(['Is it worth grading this card?', 'Where can I send it for grading?'])
+      : '<p>You can send cards to <b>PSA, CGC, BGS or TAG</b> directly by mail, or drop them at a local card shop or show that offers a group submission. A group submission often cuts the cost and paperwork.</p>' + nextUp(['What does grading cost?', 'When is the next card show near me?']));
   }
   async function gradeTyped(text) {
     if (/\[card (name|number)\]/i.test(text)) { say('<p>Replace <b>[card name]</b> and the number with your card, or send photos instead.</p>' + chips([['Take a photo', act('card-photo', 'grade')]])); M.pending = 'grade'; return; }
@@ -3788,15 +3823,29 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   function renderRows(rows, ui, steps) {
     steps = [...new Set(steps)];
     let stepsHTML = steps.length ? '<ul class="cp-mori-steps">' + steps.map((s) => '<li class="is-done"><i></i><span>' + esc(s) + "</span></li>").join("") + "</ul>" : "";
+    let last = null, lastKind = "";
     for (const r of rows) {
       if (r.role !== "mori" || r.kind === "status") continue;
-      if (r.kind === "confirm" && r.payload) ui.say(stepsHTML + proposalHTML(r.payload, r.id));
+      if (r.kind === "suggest") {
+        // Follow-up questions go under the last bubble of this answer.
+        const list = (r.payload && r.payload.suggestions) || [];
+        if (list.length && P.nextUpHTML) {
+          if (last) last.querySelector(".cp-mori-body").insertAdjacentHTML("beforeend", P.nextUpHTML(list));
+          else ui.say(P.nextUpHTML(list));
+          ui.scrollDown();
+        }
+        continue;
+      }
+      if (r.kind === "confirm" && r.payload) last = ui.say(stepsHTML + proposalHTML(r.payload, r.id));
       else if (r.kind === "grade" && r.payload && P.gradeReportHTML) {
         const [should, take] = P.gradeReportHTML(r.payload);
-        ui.say(stepsHTML + (r.payload.card ? "<p>Here is how <b>" + esc(r.payload.card) + "</b> is likely to grade:</p>" : "") + should);
-        ui.say(take);
+        // Mori's own intro line and the "Should I grade?" card share one bubble.
+        if (last && lastKind === "text") last.querySelector(".cp-mori-body").insertAdjacentHTML("beforeend", should);
+        else ui.say(stepsHTML + should);
+        last = ui.say(take);
       }
-      else ui.say(stepsHTML + "<p>" + fmt(r.content) + "</p>");
+      else last = ui.say(stepsHTML + "<p>" + fmt(r.content) + "</p>");
+      lastKind = r.kind;
       stepsHTML = "";
     }
   }
@@ -3829,10 +3878,11 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
         for (const line of lines) {
           if (!line) continue;
           const ev = JSON.parse(line);
-          if (ev.type === "status") { steps.push(ev.text); typing.querySelector("span").textContent = ev.text; }
+          // The status text goes in the typing bubble's label, never in Mori's avatar.
+          if (ev.type === "status") { steps.push(ev.text); const label = typing.querySelector(".cp-mori-typing span"); if (label) label.textContent = ev.text; }
           if (ev.type === "text") {
             if (!bubble) { bubble = ui.say("<p></p>"); typing.after(bubble); }
-            streamed += ev.text; bubble.querySelector("p").innerHTML = fmt(streamed); ui.scrollDown();
+            streamed += ev.text; bubble.querySelector("p").innerHTML = fmt(streamed.replace(/(^|\n)[ \t*_]*suggestions?[ \t*_]*:[\s\S]*$/i, "")); ui.scrollDown();
           }
           if (ev.type === "error") throw new Error(ev.text);
           if (ev.type === "done") { typing.remove(); bubble?.remove(); bubble = null; renderRows(ev.rows, ui, steps); }
