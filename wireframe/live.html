@@ -118,7 +118,7 @@
       head = "<small>" + (buy ? "Buy order" : "Sell order") + " · price alert</small><b>" + esc(p.card.name) + "</b>";
       art = cardImg(p.card) ? '<div class="cp-mori-ident"><img src="' + esc(cardImg(p.card)) + '" alt=""><div><small>' + esc(p.card.set_name || "") + "</small><b>" + esc(p.card.name) + "</b></div></div>" : "";
       rows = row(buy ? "Buy for up to" : "Sell for at least", "US$" + Number(p.price_usd).toLocaleString("en-US")) +
-        (p.market_usd ? row("Market price now", "US$" + Number(p.market_usd).toLocaleString("en-US") + " (TCGplayer)") : "") +
+        (p.market_usd ? row("Market price now", "About US$" + Number(p.market_usd).toLocaleString("en-US")) : "") +
         row("Watching", "Listings and collectors you follow") + row("Expires", "In 30 days") + (p.note ? row("Note", p.note) : "");
     } else if (p.tool === "save_memory") {
       head = "<small>New memory · Private</small><b>" + esc(p.title) + "</b>";
@@ -135,6 +135,11 @@
     for (const r of rows) {
       if (r.role !== "mori" || r.kind === "status") continue;
       if (r.kind === "confirm" && r.payload) ui.say(stepsHTML + proposalHTML(r.payload, r.id));
+      else if (r.kind === "grade" && r.payload && P.gradeReportHTML) {
+        const [should, take] = P.gradeReportHTML(r.payload);
+        ui.say(stepsHTML + (r.payload.card ? "<p>Here is how <b>" + esc(r.payload.card) + "</b> is likely to grade:</p>" : "") + should);
+        ui.say(take);
+      }
       else ui.say(stepsHTML + "<p>" + fmt(r.content) + "</p>");
       stepsHTML = "";
     }

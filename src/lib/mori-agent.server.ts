@@ -16,6 +16,7 @@ import {
   getSet,
   getSetCards,
   searchCards,
+  usdRange,
 } from "./tcgdex";
 import { validateWriteArgs, ownPhotoPath } from "./mori-validation";
 import {
@@ -33,19 +34,19 @@ type DB = SupabaseClient<Database>;
 const MODEL = process.env["AI_GATEWAY_MODEL"] || "google/gemini-2.5-flash";
 
 const SYSTEM = `You are Mori, a warm, concise Pokémon TCG collector agent inside the Bindory app. Keep replies short (2-5 sentences, or a short list), friendly, US English, sentence case. Use **bold** for card names and key numbers. Write money with thousands separators, e.g. US$2,211.14 or €1,810.68.
-You act through your tools: search_catalogue, get_card_prices, my_price_movers, get_set_cards, list_my_cards, find_related_cards, find_collectors, suggest_binder_for_card, add_card_to_collection, add_to_wishlist, create_binder, save_memory, set_order.
+You act through your tools: search_catalogue, get_card_prices, pre_grade_report, my_price_movers, get_set_cards, list_my_cards, find_related_cards, find_collectors, suggest_binder_for_card, add_card_to_collection, add_to_wishlist, create_binder, save_memory, set_order.
 Rules:
 - Be proactive. When a request is open-ended (build a binder, complete my set, what to chase next, collectors who share my taste, trade-ups, value changes), start with list_my_cards and the other tools and come back with a concrete suggestion. Do not hand the work back to the collector; ask at most one short question, after you have suggested something.
 - Only list_my_cards says what the collector owns. Cards in earlier confirmation cards that were not confirmed are not in their collection.
 - Never invent data. Every card, set, artist, price, memory or collector you mention must come from a tool result or a photo in this conversation. If a tool returns nothing, say so and offer a next step.
 - Card ids are TCGdex ids such as "swsh7-215". Find them with search_catalogue first (search by the Pokémon/card name, then pick the result whose number matches); never guess an id. Never show ids to the collector; name cards by name and number (e.g. **Umbreon VMAX 215/203**).
 - Photos: when the user sends card photos, read the card name and the collector number printed at the bottom left (e.g. 125/094), then search_catalogue by name and pick the result whose number matches. Never claim to identify a photo you have not seen.
-- Prices: only quote prices from get_card_prices, say where they come from (TCGplayer in US$, Cardmarket in EUR) and that they are recent raw (ungraded) market prices. If there is no price data, say so. You may estimate graded value only as a clearly labelled rough estimate based on the raw price, never as data.
-- Pre-grading: only from photos you have seen. Comment on centering, corners, edges and surface, give a likely grade range, and say it is an estimate, not an official grade. Never promise a PSA 10; glare and photo angle limit what you can see. If there are no photos, ask for front and back photos.
-- Should I grade it: compare the raw market price with the likely graded outcome after a typical grading fee (about US$25-150 depending on service level and value), and recommend clearly.
+- Prices: only quote prices from get_card_prices. Give one range in US$ (e.g. "**US$525 to US$615** raw, ungraded"); do not name marketplaces or data sources. If there is no price data, say so. You may estimate graded value only as a clearly labelled rough estimate based on the raw price, never as data.
+- Pre-grading (only when the collector asks for a pre-grade or whether to grade; never for a plain price check): only from photos you have seen; if there are no photos, ask for front and back photos. Identify the card, call get_card_prices, then call pre_grade_report exactly once with: the three most likely whole PSA-scale grades (e.g. 10, 9, 8, or 9, 8, 7; no half grades) with probabilities that add up to 100 and a short visible reason each; subgrade scores (0-100) for centering, corners, edges and surface as PSA, CGC, BGS and TAG would see them; the overall grade each company would likely give; your confidence (0-100, lower when glare or angle hides detail); a short notes line (e.g. "60/40 back · light corner whitening"); and Mori's take: start with a clear verdict ("Worth sending." or "Sell it raw." or "Keep it raw."), then one short sentence why, weighing the likely grade against the raw price and a typical grading fee plus shipping (about US$25-150). Be realistic: a PSA 10 is rarely the most likely outcome from photos. After pre_grade_report, reply with one short sentence at most (it already shows the full report).
+- Should I grade it (without new photos): compare the raw price range with the likely graded outcome after a typical grading fee, and recommend clearly.
 - Buy or sell orders: you need buy or sell, the card, and a price in US$. Ask for anything missing. Check get_card_prices so you can say how the price compares with the market, then call set_order. Orders are watch alerts in this demo: Mori notifies the collector when a matching listing appears; nothing is bought or sold automatically.
 - Trade-up challenge: use list_my_cards and get_card_prices to suggest trading two or three cards the collector owns toward one card they would love whose value is close to the combined value of what they give (roughly 80-110%), with the values from the tools.
-- Value changes (what went up or down in my collection): call my_price_movers once. Report the biggest risers (and any big fallers) as percentages with today's price, and say it compares the Cardmarket 7-day average with the 30-day average.
+- Value changes (what went up or down in my collection): call my_price_movers once. Report the biggest risers (and any big fallers) as percentages with today's price range, and say it compares the last 7 days with the last 30 days. Do not name marketplaces.
 - Completing a set: use list_my_cards to find the set they own the most cards from, then get_set_cards for that set, and name a few of the cards they are missing (prefer notable ones).
 - Collectors who share my taste: use list_my_cards, then find_collectors, and explain the match using each collector's bio and binders.
 - Trends and card shows: you have no live event listings or trend data. Say that plainly, then share two or three general, well-known collector trends or tips, labelled as general knowledge, and suggest where to check (local game stores, official Pokémon event locators, collector communities). Never invent specific events, dates or venues.
@@ -74,7 +75,7 @@ const tools: NonNullable<ResponsesRequest["tools"]> = [
     type: "function",
     name: "get_card_prices",
     description:
-      "Recent raw (ungraded) market prices for a TCGdex card: TCGplayer (USD) and Cardmarket (EUR), updated daily.",
+      "Today's raw (ungraded) market price range in US$ for a TCGdex card, updated daily.",
     strict: false,
     parameters: {
       type: "object",
@@ -84,9 +85,67 @@ const tools: NonNullable<ResponsesRequest["tools"]> = [
   },
   {
     type: "function",
+    name: "pre_grade_report",
+    description:
+      "Show the collector a pre-grade report from the card photos: Should I grade? (likely grades with probabilities), Mori's take, and a detailed subgrade report for PSA, CGC, BGS and TAG.",
+    strict: false,
+    parameters: {
+      type: "object",
+      properties: {
+        card: str("Card name and number, e.g. Mega Charizard X ex 125/094"),
+        outcomes: {
+          type: "array",
+          description: "The three most likely grades, probabilities adding up to 100",
+          items: {
+            type: "object",
+            properties: {
+              grade: { type: "number" },
+              probability: { type: "number" },
+              reason: str("Short visible reason, e.g. Centering is outside 55/45"),
+            },
+            required: ["grade", "probability", "reason"],
+          },
+        },
+        take: str("Mori's take: one or two plain sentences, is it worth sending?"),
+        confidence: { type: "number", description: "0-100" },
+        subgrades: {
+          type: "object",
+          description: "Scores 0-100 per aspect, per grading company",
+          properties: Object.fromEntries(
+            ["centering", "corners", "edges", "surface"].map((k) => [
+              k,
+              {
+                type: "object",
+                properties: {
+                  psa: { type: "number" },
+                  cgc: { type: "number" },
+                  bgs: { type: "number" },
+                  tag: { type: "number" },
+                },
+              },
+            ]),
+          ),
+        },
+        overall: {
+          type: "object",
+          description: "Likely overall grade per company",
+          properties: {
+            psa: { type: "number" },
+            cgc: { type: "number" },
+            bgs: { type: "number" },
+            tag: { type: "number" },
+          },
+        },
+        notes: str("Short notes line, e.g. 60/40 back · light corner whitening"),
+      },
+      required: ["outcomes", "take", "confidence", "subgrades", "overall"],
+    },
+  },
+  {
+    type: "function",
     name: "my_price_movers",
     description:
-      "For the collector's own cards: compare the Cardmarket 7-day average price with the 30-day average and return the biggest moves, plus today's TCGplayer price. One call covers the whole collection.",
+      "For the collector's own cards: compare the 7-day average price with the 30-day average and return the biggest moves, plus today's price range. One call covers the whole collection.",
     strict: false,
     parameters: { type: "object", properties: {} },
   },
@@ -269,7 +328,7 @@ async function runReadTool(db: DB, name: string, a: Args): Promise<unknown> {
           set: r.card.set.name,
           rarity: r.card.rarity,
         },
-        prices: r.pricing ?? { note: "No market price data for this card" },
+        raw_price_usd: usdRange(r.pricing) ?? { note: "No market price data for this card" },
       };
     }
     case "find_related_cards": {
@@ -310,20 +369,13 @@ async function runReadTool(db: DB, name: string, a: Args): Promise<unknown> {
         ids.map(async (id) => {
           const r = await getCardPricing(id).catch(() => null);
           const cm = r?.pricing?.cardmarket as { avg7?: number; avg30?: number } | undefined;
-          const tp = r?.pricing?.tcgplayer
-            ? Object.values(r.pricing.tcgplayer).find(
-                (v): v is { marketPrice?: number } =>
-                  typeof v === "object" && v !== null && "marketPrice" in v,
-              )
-            : undefined;
           if (!r || !cm?.avg7 || !cm.avg30) return null;
+          const range = usdRange(r.pricing);
           return {
             card: `${r.card.name} ${r.card.localId}`,
             set: r.card.set.name,
             change_pct: Math.round(((cm.avg7 - cm.avg30) / cm.avg30) * 1000) / 10,
-            cardmarket_avg7_eur: cm.avg7,
-            cardmarket_avg30_eur: cm.avg30,
-            tcgplayer_market_usd: tp?.marketPrice,
+            price_now_usd: range ? `US$${range.low} to US$${range.high}` : undefined,
           };
         }),
       );
@@ -331,7 +383,7 @@ async function runReadTool(db: DB, name: string, a: Args): Promise<unknown> {
       moves.sort((x, y) => y.change_pct - x.change_pct);
       return moves.length
         ? {
-            compared: "Cardmarket 7-day average vs 30-day average",
+            compared: "7-day average price vs 30-day average price",
             cards_checked: moves.length,
             moves,
           }
@@ -422,12 +474,7 @@ async function buildProposal(
   if (name === "set_order") {
     const r = await getCardPricing(s(a["card_id"]) ?? "");
     if (!r) return { error: "Card not found in the catalogue" };
-    const holo = r.pricing?.tcgplayer
-      ? Object.values(r.pricing.tcgplayer).find(
-          (v): v is { marketPrice?: number } =>
-            typeof v === "object" && v !== null && "marketPrice" in v,
-        )
-      : undefined;
+    const range = usdRange(r.pricing);
     return {
       tool: "set_order",
       side: a["side"] === "sell" ? "sell" : "buy",
@@ -438,7 +485,7 @@ async function buildProposal(
         set_name: r.card.set.name,
       },
       price_usd: Math.round(Number(a["price_usd"]) * 100) / 100,
-      market_usd: typeof holo?.marketPrice === "number" ? holo.marketPrice : undefined,
+      market_usd: range?.typical,
       note: s(a["note"]),
     };
   }
@@ -460,6 +507,56 @@ async function buildProposal(
     };
   }
   return { error: "Unknown tool" };
+}
+
+/** Checks and tidies the model's pre-grade report before it is shown. */
+function gradeReport(a: Args) {
+  const num = (v: unknown, lo: number, hi: number) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : undefined;
+  };
+  const outcomes = (Array.isArray(a["outcomes"]) ? (a["outcomes"] as Args[]) : [])
+    .map((o) => ({
+      grade: num(o["grade"], 1, 10),
+      probability: num(o["probability"], 0, 100) ?? 0,
+      reason: s(o["reason"])?.slice(0, 120) ?? "",
+    }))
+    .filter(
+      (o): o is { grade: number; probability: number; reason: string } => o.grade !== undefined,
+    )
+    .slice(0, 4);
+  const take = s(a["take"])?.slice(0, 400);
+  if (outcomes.length < 2 || !take)
+    return { error: "Give at least two likely grades and Mori's take." };
+  const total = outcomes.reduce((n, o) => n + o.probability, 0) || 1;
+  outcomes.forEach((o) => (o.probability = Math.round((o.probability / total) * 100)));
+  outcomes.sort((x, y) => y.grade - x.grade);
+  const companies = ["psa", "cgc", "bgs", "tag"] as const;
+  const block = (v: unknown, lo: number, hi: number) =>
+    Object.fromEntries(
+      companies.map((c) => [
+        c,
+        num((v && typeof v === "object" ? (v as Args) : {})[c], lo, hi) ?? null,
+      ]),
+    );
+  const subs = a["subgrades"] && typeof a["subgrades"] === "object" ? (a["subgrades"] as Args) : {};
+  return {
+    card: s(a["card"])?.slice(0, 120),
+    outcomes,
+    take,
+    confidence: num(a["confidence"], 0, 100) ?? 70,
+    // Some models answer subgrades on a 1-10 scale (BGS style); show everything as 0-100.
+    subgrades: Object.fromEntries(
+      ["centering", "corners", "edges", "surface"].map((k) => [
+        k,
+        Object.fromEntries(
+          Object.entries(block(subs[k], 0, 100)).map(([c, v]) => [c, v !== null && v <= 10 ? v * 10 : v]),
+        ),
+      ]),
+    ),
+    overall: block(a["overall"], 1, 10),
+    notes: s(a["notes"])?.slice(0, 160),
+  };
 }
 
 /** The conversation so far: everything since `since` (when the collector opened Ask Mori or tapped
@@ -600,7 +697,22 @@ export async function runMori(
           arguments: call.arguments ?? "{}",
         });
         let result: unknown;
-        if (isWriteTool(name)) {
+        if (name === "pre_grade_report") {
+          const report = gradeReport(args);
+          if ("error" in report) result = report;
+          else {
+            rows.push({
+              role: "mori",
+              kind: "grade",
+              content: `Pre-grade${report.card ? ` for ${report.card}` : ""}: ${report.outcomes
+                .map((o) => `${o.grade} (${o.probability}%)`)
+                .join(", ")}. ${report.take}`,
+              payload: report as unknown as Json,
+            });
+            result = { shown_to_user: true, note: "The report is on screen." };
+            stop = true;
+          }
+        } else if (isWriteTool(name)) {
           const p = await buildProposal(db, userId, name, args);
           if ("error" in p) result = p;
           else {
@@ -647,11 +759,11 @@ export async function runMori(
         : "Sorry, I could not answer just now. Please try again.";
   }
 
-  if (!finalText && !rows.some((row) => row.kind === "confirm"))
+  if (!finalText && !rows.some((row) => row.kind === "confirm" || row.kind === "grade"))
     finalText = "I could not finish that request. Please try again.";
   if (finalText) {
     // Put the reply before any confirmation card so it reads naturally.
-    const confirmAt = rows.findIndex((r) => r.kind === "confirm");
+    const confirmAt = rows.findIndex((r) => r.kind === "confirm" || r.kind === "grade");
     const reply = { role: "mori" as const, kind: "text", content: finalText };
     if (confirmAt >= 0) rows.splice(confirmAt, 0, reply);
     else rows.push(reply);

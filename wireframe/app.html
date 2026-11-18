@@ -1304,6 +1304,38 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 #clickable-prototype .cp-order ul{display:grid;gap:4px;margin:0;padding:0;list-style:none}
 #clickable-prototype .cp-order li{display:flex;justify-content:space-between;gap:8px;padding:6px 7px;border-radius:7px;background:#fff;font-size:8.5px;color:#66657a}
 #clickable-prototype .cp-order li b{color:#282540;text-align:right}
+
+/* Pre-grade report: Should I grade?, Mori's take, Subgrade report */
+#clickable-prototype .cp-grade{margin-top:8px;padding:11px 11px 4px;border:1px solid var(--theme-e4e0f2,#e4e0f2);border-radius:14px;background:var(--mori-card)}
+#clickable-prototype .cp-grade-kicker{display:block;font-size:8px;font-weight:850;letter-spacing:.12em;text-transform:uppercase;color:#6a55d8}
+#clickable-prototype .cp-grade-row{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:9px;padding:7px 0}
+#clickable-prototype .cp-grade .cp-grade-kicker{margin-bottom:3px}
+#clickable-prototype .cp-grade-badge{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:#efedff;color:#5f4fd8;font-size:11px;font-weight:800}
+#clickable-prototype .cp-grade-row.is-top .cp-grade-badge{background:#5f4fd8;color:#fff}
+#clickable-prototype .cp-grade-what b,#clickable-prototype .cp-grade-what small{display:block}
+#clickable-prototype .cp-grade-what b{font-size:11px;color:var(--mori-ink);line-height:1.2}
+#clickable-prototype .cp-grade-what small{font-size:8.5px;color:var(--mori-muted);margin-top:2px;line-height:1.3}
+#clickable-prototype .cp-grade-pct{font-size:11px;color:var(--mori-ink)}
+#clickable-prototype .cp-grade-take{padding:11px 12px;border-radius:15px;background:#161b31;color:#fff}
+#clickable-prototype .cp-grade-take small{display:block;font-size:8px;font-weight:850;letter-spacing:.12em;text-transform:uppercase;color:#c8c0ff}
+#clickable-prototype .cp-grade-take p{margin:5px 0 0!important;font-size:11px!important;line-height:1.45!important;color:#fff!important}
+#clickable-prototype .cp-grade-sub{margin-top:8px}
+#clickable-prototype .cp-grade-compared{display:inline-flex;align-items:center;gap:6px;padding:6px 10px 6px 6px;border:1px solid var(--theme-e4e0f2,#e4e0f2);border-radius:12px;background:var(--mori-card);font-size:9.5px;color:var(--mori-ink)}
+#clickable-prototype .cp-grade-compared svg{width:20px;height:20px;padding:3px;border-radius:7px;background:#efedff;fill:none;stroke:#5f4fd8;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#clickable-prototype .cp-grade-report{margin-top:7px;padding:10px 9px 8px;border:1px solid var(--theme-e4e0f2,#e4e0f2);border-radius:14px;background:var(--mori-card)}
+#clickable-prototype .cp-grade-report-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px}
+#clickable-prototype .cp-grade-report-head span{padding:3px 7px;border-radius:99px;background:#efedff;color:#6a55d8;font-size:8.5px;font-weight:700}
+#clickable-prototype .cp-grade-report table{width:100%;border-collapse:collapse;table-layout:fixed}
+#clickable-prototype .cp-grade-report th{font-size:8px;font-weight:600;color:var(--mori-muted);text-align:left;padding:4px 2px}
+#clickable-prototype .cp-grade-report thead th{font-size:7.5px;letter-spacing:.04em}
+#clickable-prototype .cp-grade-report tbody th{width:31%;padding-right:4px}
+#clickable-prototype .cp-grade-report thead th:first-child{width:31%}
+#clickable-prototype .cp-grade-report td{padding:4px 2px;vertical-align:top}
+#clickable-prototype .cp-grade-report td b{display:block;font-size:8.5px;color:var(--mori-ink)}
+#clickable-prototype .cp-grade-report td i{display:block;height:2.5px;margin-top:3px;border-radius:99px;background:linear-gradient(90deg,#9d8cf2,#f0a9d8)}
+#clickable-prototype .cp-grade-overall th,#clickable-prototype .cp-grade-overall td{border-top:1px solid var(--theme-e4e0f2,#e4e0f2);padding-top:6px}
+#clickable-prototype .cp-grade-overall td{font-size:10px;font-weight:800;color:#6a55d8}
+#clickable-prototype .cp-grade-notes{margin:6px 0 0!important;font-size:8.5px!important;color:var(--mori-muted)!important}
 </style>
 <section id="clickable-prototype" aria-label="Clickable Bindory prototype">
   <div class="cp-shell">
@@ -2808,12 +2840,45 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     if (kind === 'grade') return gradeResult();
     priceResult(true);
   }
+  /* ---- Pre-grade report: "Should I grade?", then "Mori's take" with a Detail report (subgrades) ---- */
+  const GRADE_LABEL = { 10: 'Gem mint', 9.5: 'Gem mint', 9: 'Mint', 8.5: 'Near mint-mint+', 8: 'Near mint-mint', 7: 'Near mint', 6: 'Excellent-mint', 5: 'Excellent' };
+  const SCALE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 21h10M5 7h14M5 7l-3 7a3.5 3.5 0 0 0 6 0L5 7Zm14 0-3 7a3.5 3.5 0 0 0 6 0l-3-7Z"/></svg>';
+  const GRADERS = [['psa', 'PSA'], ['cgc', 'CGC'], ['bgs', 'BGS'], ['tag', 'TAG']];
+  const SUBS = [['centering', 'Centering'], ['corners', 'Corners'], ['edges', 'Edges'], ['surface', 'Surface']];
+  /** Returns [the "Should I grade?" card, Mori's take + Detail report]. Shared with the live AI layer. */
+  function gradeReportHTML(r) {
+    const top = r.outcomes.reduce((a, o) => (o.probability > a.probability ? o : a), r.outcomes[0]);
+    const should = '<div class="cp-grade"><small class="cp-grade-kicker">Should I grade?</small>' + r.outcomes.map(o =>
+      '<div class="cp-grade-row' + (o === top ? ' is-top' : '') + '"><span class="cp-grade-badge">' + esc(o.grade) + '</span>' +
+      '<span class="cp-grade-what"><b>' + esc(GRADE_LABEL[o.grade] || 'Grade ' + o.grade) + '</b><small>' + esc(o === top ? 'Most likely outcome' : o.reason || '') + '</small></span>' +
+      '<b class="cp-grade-pct">' + Math.round(o.probability) + '%</b></div>').join('') + '</div>';
+    const cell = v => '<td><b>' + Math.round(v) + '%</b><i style="width:' + Math.max(8, Math.min(100, v)) + '%"></i></td>';
+    const sub = '<div class="cp-grade-sub" hidden><span class="cp-grade-compared">' + SCALE_ICON + 'Compared <b>PSA, CGC, BGS, TAG</b></span>' +
+      '<div class="cp-grade-report"><div class="cp-grade-report-head"><small class="cp-grade-kicker">Subgrade report</small><span>Confidence ' + Math.round(r.confidence) + '%</span></div>' +
+      '<table><thead><tr><th></th>' + GRADERS.map(([, n]) => '<th>' + n + '</th>').join('') + '</tr></thead><tbody>' +
+      SUBS.map(([k, n]) => '<tr><th>' + n + '</th>' + GRADERS.map(([g]) => cell(((r.subgrades || {})[k] || {})[g] || 0)).join('') + '</tr>').join('') +
+      '<tr class="cp-grade-overall"><th>Grade</th>' + GRADERS.map(([g]) => '<td>' + esc((r.overall || {})[g] ?? '') + '</td>').join('') + '</tr></tbody></table>' +
+      (r.notes ? '<p class="cp-grade-notes">' + esc(r.notes) + '</p>' : '') + '</div>' +
+      '<p class="cp-mori-sample">Estimates from your photos, not official grades.</p></div>';
+    const take = '<div class="cp-grade-take"><small>Mori’s take</small><p>' + esc(r.take) + '</p></div>' +
+      '<div class="cp-mori-chips"><button data-grade-detail>Detail report</button></div>' + sub;
+    return [should, take];
+  }
+  P.gradeReportHTML = gradeReportHTML;
+  const SAMPLE_GRADE = {
+    outcomes: [{ grade: 10, probability: 6, reason: 'Centering is outside 55/45' }, { grade: 9, probability: 68, reason: 'Clean corners and surface' }, { grade: 8, probability: 26, reason: 'Light corner whitening' }],
+    take: 'Worth sending. A 9 is the likely result, and it still covers the fees after shipping. Don’t count on a 10.',
+    confidence: 91,
+    subgrades: { centering: { psa: 86, cgc: 87, bgs: 85, tag: 88 }, corners: { psa: 84, cgc: 85, bgs: 82, tag: 86 }, edges: { psa: 89, cgc: 90, bgs: 88, tag: 90 }, surface: { psa: 91, cgc: 92, bgs: 90, tag: 92 } },
+    overall: { psa: 9, cgc: 9, bgs: 8.5, tag: 9 },
+    notes: '60/40 back · light corner whitening'
+  };
   async function gradeResult() {
     const c = CHARX;
-    const el = say('<p>This is <b>' + c.name + ' ' + c.number + '</b> from <i>' + c.set + '</i>. Here is what I can see in your photos:</p>');
-    await steps(el, ['Centering: about 55/45 front, 60/40 back', 'Corners: sharp, no visible wear', 'Edges: light whitening on the back', 'Surface: clean, some glare on the holo']);
-    say('<p>Likely grade: <b>PSA 9</b>. A 10 is possible, but the back edge is the risk, and glare hides some of the surface.</p><p class="cp-mori-sample">An estimate from photos, not an official grade.</p>' +
-      chips([['What is it worth graded?', act('price-decision')], ['Price check this card', act('card-photo', 'price')]]));
+    const [should, take] = gradeReportHTML(SAMPLE_GRADE);
+    say('<p>This is <b>' + c.name + ' ' + c.number + '</b> from <i>' + c.set + '</i>. Here is how it is likely to grade:</p>' + should);
+    await wait(500);
+    say(take);
   }
   async function gradeTyped(text) {
     if (/\[card (name|number)\]/i.test(text)) { say('<p>Replace <b>[card name]</b> and the number with your card, or send photos instead.</p>' + chips([['Take a photo', act('card-photo', 'grade')]])); M.pending = 'grade'; return; }
@@ -3200,6 +3265,11 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 
   app.addEventListener('click', e => {
     const el = e.target.closest('button'); if (!el || !app.contains(el) || el.disabled) return;
+    if ('gradeDetail' in el.dataset) {
+      const box = el.closest('.cp-mori-body'), sub = box && qs('.cp-grade-sub', box);
+      if (sub) { sub.hidden = false; el.closest('.cp-mori-chips').remove(); sub.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+      return;
+    }
     const d = el.dataset;
     if (d.moriPrompt) { openMori(d.moriPrompt); return; }
     if (d.moriAsk) { hideNotice(); if (!M.busy) send(d.moriAsk); return; }
@@ -3704,7 +3774,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       head = "<small>" + (buy ? "Buy order" : "Sell order") + " · price alert</small><b>" + esc(p.card.name) + "</b>";
       art = cardImg(p.card) ? '<div class="cp-mori-ident"><img src="' + esc(cardImg(p.card)) + '" alt=""><div><small>' + esc(p.card.set_name || "") + "</small><b>" + esc(p.card.name) + "</b></div></div>" : "";
       rows = row(buy ? "Buy for up to" : "Sell for at least", "US$" + Number(p.price_usd).toLocaleString("en-US")) +
-        (p.market_usd ? row("Market price now", "US$" + Number(p.market_usd).toLocaleString("en-US") + " (TCGplayer)") : "") +
+        (p.market_usd ? row("Market price now", "About US$" + Number(p.market_usd).toLocaleString("en-US")) : "") +
         row("Watching", "Listings and collectors you follow") + row("Expires", "In 30 days") + (p.note ? row("Note", p.note) : "");
     } else if (p.tool === "save_memory") {
       head = "<small>New memory · Private</small><b>" + esc(p.title) + "</b>";
@@ -3721,6 +3791,11 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     for (const r of rows) {
       if (r.role !== "mori" || r.kind === "status") continue;
       if (r.kind === "confirm" && r.payload) ui.say(stepsHTML + proposalHTML(r.payload, r.id));
+      else if (r.kind === "grade" && r.payload && P.gradeReportHTML) {
+        const [should, take] = P.gradeReportHTML(r.payload);
+        ui.say(stepsHTML + (r.payload.card ? "<p>Here is how <b>" + esc(r.payload.card) + "</b> is likely to grade:</p>" : "") + should);
+        ui.say(take);
+      }
       else ui.say(stepsHTML + "<p>" + fmt(r.content) + "</p>");
       stepsHTML = "";
     }

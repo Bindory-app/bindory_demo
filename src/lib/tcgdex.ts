@@ -46,6 +46,34 @@ export async function getCardPricing(
   return { card: c, pricing: c.pricing ?? null };
 }
 
+/** One US$ price range for a raw (ungraded) card, from the daily market prices. Collectors see only
+ *  the range, not which marketplaces it comes from. Null when there is no US$ market data. */
+export function usdRange(
+  pricing: CardPricing | null | undefined,
+): { low: number; high: number; typical: number } | null {
+  const variants = pricing?.tcgplayer
+    ? Object.values(pricing.tcgplayer).filter(
+        (v): v is { marketPrice?: number; midPrice?: number } =>
+          typeof v === "object" && v !== null && ("marketPrice" in v || "midPrice" in v),
+      )
+    : [];
+  const v = variants.find((x) => typeof x.marketPrice === "number") ?? variants[0];
+  const market =
+    typeof v?.marketPrice === "number" && v.marketPrice > 0 ? v.marketPrice : undefined;
+  const mid = typeof v?.midPrice === "number" && v.midPrice > 0 ? v.midPrice : undefined;
+  const typical = market ?? mid;
+  if (!typical) return null;
+  let low = Math.min(market ?? typical, mid ?? typical);
+  let high = Math.max(market ?? typical, mid ?? typical);
+  if (high - low < typical * 0.1) {
+    low = typical * 0.92;
+    high = typical * 1.08;
+  }
+  const round = (n: number) =>
+    n >= 100 ? Math.round(n / 5) * 5 : n >= 10 ? Math.round(n) : Math.round(n * 100) / 100;
+  return { low: round(low), high: round(high), typical: round(typical) };
+}
+
 /** A set with its card list (id, number, name). */
 export async function getSetCards(
   id: string,
