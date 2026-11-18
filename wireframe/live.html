@@ -98,7 +98,7 @@
 
   /* ---------------- Ask Mori ---------------- */
   // Mori's text may use **bold** and [label](link); show it as plain wireframe text.
-  const fmt = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/\n/g, "<br>");
+  const fmt = (t) => esc(t).replace(/(^|\n)[ \t]*[*-][ \t]+/g, "$1• ").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|[^*\w])\*([^*\n]+?)\*(?!\*)/g, "$1$2").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/\n+/g, "<br>");
   const row = (k, v, muted) => "<li><small>" + esc(k) + "</small><b" + (muted ? ' class="is-muted"' : "") + ">" + esc(v) + "</b></li>";
   const cardImg = (c) => (c && /^https:\/\/assets\.tcgdex\.net\//.test(c.image || "") ? c.image : "");
 
@@ -130,6 +130,7 @@
   }
 
   function renderRows(rows, ui, steps) {
+    steps = [...new Set(steps)];
     let stepsHTML = steps.length ? '<ul class="cp-mori-steps">' + steps.map((s) => '<li class="is-done"><i></i><span>' + esc(s) + "</span></li>").join("") + "</ul>" : "";
     for (const r of rows) {
       if (r.role !== "mori" || r.kind === "status") continue;
@@ -139,7 +140,12 @@
     }
   }
 
-  // Called from the wireframe's own route() (patched at build time) for free-typed messages.
+  // Each visit and each "New chat" starts a fresh conversation for Mori (the server only sends it
+  // messages after this time). A few seconds back, so a slightly fast phone clock cannot hide the first message.
+  let chatSince = new Date(Date.now() - 5000).toISOString();
+  app.addEventListener("click", (e) => { if (e.target.closest("[data-mori-reset]")) chatSince = new Date(Date.now() - 5000).toISOString(); }, true);
+
+  // Called from the wireframe's own route() (patched at build time) for typed and tapped messages.
   window.bdLiveRoute = async (text, ui) => {
     if (!(await fresh())) return false; // guests keep the wireframe's scripted Mori
     const typing = ui.addMsg("mori", '<div class="cp-mori-typing"><i></i><i></i><i></i><span>Thinking</span></div>', "is-typing");
@@ -149,7 +155,7 @@
       const res = await fetch("/api/mori-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
-        body: JSON.stringify(ui.photo ? { message: text, demo_photo: "card" } : { message: text }),
+        body: JSON.stringify(Object.assign({ message: text, since: chatSince }, ui.photo ? { demo_photo: "card" } : {})),
       });
       if (!res.ok || !res.body) throw new Error("unavailable");
       const reader = res.body.getReader(), dec = new TextDecoder();

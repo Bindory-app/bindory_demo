@@ -22,6 +22,8 @@ export const TOOL_STATUS: Record<string, string> = {
   save_memory: "Checking what is missing",
   add_to_wishlist: "Preparing your wishlist",
   get_card_prices: "Checking recent market prices",
+  get_set_cards: "Looking through the set",
+  my_price_movers: "Comparing this week’s prices with this month’s",
   set_order: "Preparing your order",
 };
 

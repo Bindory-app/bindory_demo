@@ -35,6 +35,13 @@ export const Route = createFileRoute("/api/mori-chat")({
         const userId = auth.user.id;
         // The demo's "Take a photo" sends the sample card photos (front and back); the server picks
         // the images, so the browser can never make the model fetch an arbitrary URL.
+        // Start of the current chat (ISO time), so New chat gives Mori a fresh context.
+        const since =
+          "since" in body &&
+          typeof body.since === "string" &&
+          /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(body.since)
+            ? body.since
+            : undefined;
         const images: string[] = [];
         if ("demo_photo" in body && body.demo_photo === "card") {
           const [front, back] = await Promise.all([
@@ -57,7 +64,7 @@ export const Route = createFileRoute("/api/mori-chat")({
             };
             // On Vercel each request carries a short-lived OIDC token that AI Gateway accepts directly.
             const oidcToken = request.headers.get("x-vercel-oidc-token");
-            void runMori(db, userId, message, emit, abort.signal, oidcToken, images)
+            void runMori(db, userId, message, emit, abort.signal, oidcToken, images, since)
               .catch((error) => {
                 console.error(
                   "Mori chat failed",

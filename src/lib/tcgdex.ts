@@ -46,6 +46,17 @@ export async function getCardPricing(
   return { card: c, pricing: c.pricing ?? null };
 }
 
+/** A set with its card list (id, number, name). */
+export async function getSetCards(
+  id: string,
+): Promise<{ id: string; name: string; cards: CardBrief[] } | null> {
+  if (!id.trim()) return null;
+  const res = await fetch(`${BASE}/sets/${encodeURIComponent(id.trim())}`);
+  if (!res.ok) return null;
+  const d = (await res.json()) as { id: string; name: string; cards?: CardBrief[] };
+  return { id: d.id, name: d.name, cards: d.cards ?? [] };
+}
+
 export type SetDetail = { id: string; name: string; releaseDate?: string | undefined };
 
 export async function getSet(id: string): Promise<SetDetail | null> {

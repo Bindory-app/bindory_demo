@@ -2487,7 +2487,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   ];
   const SUGGESTIONS = [
     ['When is the next card show near me?', 'Can you build a binder from my collection?', 'What is the next trendy collection?', 'Which of my cards went up in value this month?'],
-    ['What card should I chase next?', 'Which collectors share my taste?', 'Can you make a video of my collection?', 'Which cards would complete my set?']
+    ['What card should I chase next?', 'Which collectors share my taste?', 'Plan a video of my collection', 'Which cards would complete my set?']
   ];
   const primaryButtons = () => '<div class="cp-mori-primary">' + PRIMARY.map(([icon, label, q]) =>
     '<button ' + (!q ? 'data-mori-prompt="memory"' : q.startsWith('prompt:') ? 'data-mori-prompt="' + q.slice(7) + '"' : 'data-mori-ask="' + esc(q) + '"') + '>' + svg(icon) + '<span>' + esc(label) + '</span></button>').join('') + '</div>';
@@ -3684,7 +3684,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 
   /* ---------------- Ask Mori ---------------- */
   // Mori's text may use **bold** and [label](link); show it as plain wireframe text.
-  const fmt = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/\n/g, "<br>");
+  const fmt = (t) => esc(t).replace(/(^|\n)[ \t]*[*-][ \t]+/g, "$1• ").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|[^*\w])\*([^*\n]+?)\*(?!\*)/g, "$1$2").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/\n+/g, "<br>");
   const row = (k, v, muted) => "<li><small>" + esc(k) + "</small><b" + (muted ? ' class="is-muted"' : "") + ">" + esc(v) + "</b></li>";
   const cardImg = (c) => (c && /^https:\/\/assets\.tcgdex\.net\//.test(c.image || "") ? c.image : "");
 
@@ -3716,6 +3716,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   }
 
   function renderRows(rows, ui, steps) {
+    steps = [...new Set(steps)];
     let stepsHTML = steps.length ? '<ul class="cp-mori-steps">' + steps.map((s) => '<li class="is-done"><i></i><span>' + esc(s) + "</span></li>").join("") + "</ul>" : "";
     for (const r of rows) {
       if (r.role !== "mori" || r.kind === "status") continue;
@@ -3725,7 +3726,12 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     }
   }
 
-  // Called from the wireframe's own route() (patched at build time) for free-typed messages.
+  // Each visit and each "New chat" starts a fresh conversation for Mori (the server only sends it
+  // messages after this time). A few seconds back, so a slightly fast phone clock cannot hide the first message.
+  let chatSince = new Date(Date.now() - 5000).toISOString();
+  app.addEventListener("click", (e) => { if (e.target.closest("[data-mori-reset]")) chatSince = new Date(Date.now() - 5000).toISOString(); }, true);
+
+  // Called from the wireframe's own route() (patched at build time) for typed and tapped messages.
   window.bdLiveRoute = async (text, ui) => {
     if (!(await fresh())) return false; // guests keep the wireframe's scripted Mori
     const typing = ui.addMsg("mori", '<div class="cp-mori-typing"><i></i><i></i><i></i><span>Thinking</span></div>', "is-typing");
@@ -3735,7 +3741,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       const res = await fetch("/api/mori-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
-        body: JSON.stringify(ui.photo ? { message: text, demo_photo: "card" } : { message: text }),
+        body: JSON.stringify(Object.assign({ message: text, since: chatSince }, ui.photo ? { demo_photo: "card" } : {})),
       });
       if (!res.ok || !res.body) throw new Error("unavailable");
       const reader = res.body.getReader(), dec = new TextDecoder();
