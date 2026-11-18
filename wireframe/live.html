@@ -201,6 +201,7 @@
   // messages after this time). A few seconds back, so a slightly fast phone clock cannot hide the first message.
   let chatSince = new Date(Date.now() - 5000).toISOString();
   app.addEventListener("click", (e) => { if (e.target.closest("[data-mori-reset]")) chatSince = new Date(Date.now() - 5000).toISOString(); }, true);
+  app.addEventListener("cp:mori-new-chat", () => { chatSince = new Date().toISOString(); });
 
   // Called from the wireframe's own route() (patched at build time) for typed and tapped messages.
   window.bdLiveRoute = async (text, ui) => {

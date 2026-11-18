@@ -836,7 +836,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-prompts button:last-child{b
 #clickable-prototype .cp-mori-thread{display:grid;gap:10px}
 #clickable-prototype .cp-mori-msg{display:flex;gap:7px;align-items:flex-end;animation:cpMoriIn .25s ease both}
 #clickable-prototype .cp-mori-msg .cp-mori-face{width:26px;height:26px;margin-bottom:2px}
-#clickable-prototype .cp-mori-body{max-width:86%;font-size:12px;line-height:1.5;color:var(--mori-ink)}
+#clickable-prototype .cp-mori-body{max-width:86%;font-size:10px;line-height:1.5;color:var(--mori-ink)}
 #clickable-prototype .cp-mori-body p{margin:0 0 6px}
 #clickable-prototype .cp-mori-body p:last-child{margin-bottom:0}
 #clickable-prototype .cp-mori-mori .cp-mori-body{background:var(--mori-card);border:1px solid var(--mori-line);border-radius:16px 16px 16px 5px;padding:9px 11px;flex:1}
@@ -1505,6 +1505,43 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 #clickable-prototype .cp-video-plan .cp-mori-actions{flex-wrap:nowrap}
 #clickable-prototype .cp-mori-msg:has(.cp-video-plan){width:100%;max-width:100%;min-width:0;box-sizing:border-box}
 #clickable-prototype .cp-mori-msg:has(.cp-video-plan) .cp-mori-body{min-width:0;width:0}
+
+/* Log a new memory: fill-in template. */
+#clickable-prototype .cp-mem-tpl{margin-top:6px;padding:10px;border-radius:13px;border:1px solid #dad5ff;background:linear-gradient(145deg,#f0edff,#fff)}
+#clickable-prototype .cp-mem-kinds{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+#clickable-prototype .cp-mem-kinds button{border:1px solid #ddd6fb;background:#fff;color:var(--mori-muted);border-radius:99px;padding:4px 9px;font:inherit;font-size:9.5px;font-weight:750;cursor:pointer}
+#clickable-prototype .cp-mem-kinds button.is-selected{background:linear-gradient(135deg,#6250d8,#d98acc);border-color:transparent;color:#fff}
+#clickable-prototype .cp-mem-text{margin:0;font-size:10px;line-height:2;color:var(--mori-ink)}
+#clickable-prototype .cp-mem-slot{display:inline;border:0;border-bottom:1.5px dashed #8f7ff0;background:#ece6ff;color:#5b47cf;border-radius:6px;padding:2px 6px;font:inherit;font-weight:750;cursor:pointer;line-height:1.4}
+#clickable-prototype .cp-mem-slot.is-filled{border-bottom-style:solid;border-bottom-color:#6250d8;background:#fff;color:var(--mori-ink)}
+#clickable-prototype .cp-mem-slot:hover{background:#e2daff}
+#clickable-prototype .cp-mem-input{display:inline-block;max-width:100%;border:1.5px solid #6250d8;border-radius:6px;padding:2px 6px;font:inherit;font-size:10px;font-weight:700;color:var(--mori-ink);background:#fff;outline:0;box-shadow:0 0 0 3px #6250d822}
+#clickable-prototype .cp-mem-hint{margin:6px 0 0;font-size:9.5px;color:var(--mori-muted)}
+#clickable-prototype .cp-mem-tpl.is-done .cp-mem-slot{cursor:default}
+
+/* Memory template: optional blanks, and the "Add how it felt" section. */
+#clickable-prototype .cp-mem-more{margin-top:8px;border-top:1px solid #e6e1fb;padding-top:7px}
+#clickable-prototype .cp-mem-more summary{cursor:pointer;list-style:none;font-size:10.5px;font-weight:800;color:#5b47cf}
+#clickable-prototype .cp-mem-more summary::-webkit-details-marker{display:none}
+#clickable-prototype .cp-mem-more summary:before{content:"+ "}
+#clickable-prototype .cp-mem-more[open] summary:before{content:"− "}
+#clickable-prototype .cp-mem-more summary em{font-style:normal;font-weight:600;color:var(--mori-muted);font-size:9px;margin-left:3px}
+#clickable-prototype .cp-mem-more>small{display:block;margin:8px 0 4px;font-size:8px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#6853d3}
+#clickable-prototype .cp-mem-feels{display:flex;flex-wrap:wrap;gap:4px}
+#clickable-prototype .cp-mem-feels button{border:1px solid #ddd6fb;background:#fff;color:var(--mori-ink);border-radius:99px;padding:4px 9px;font:inherit;font-size:9.5px;font-weight:700;cursor:pointer}
+#clickable-prototype .cp-mem-feels button.is-selected{background:linear-gradient(135deg,#6250d8,#d98acc);border-color:transparent;color:#fff}
+#clickable-prototype .cp-mem-words{margin:7px 0 0;font-size:11px;line-height:2;color:var(--mori-ink)}
+#clickable-prototype .cp-mem-rate{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0}
+#clickable-prototype .cp-mem-rate>span:first-child{font-size:10.5px;font-weight:700;color:var(--mori-ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#clickable-prototype .cp-mem-stars{display:flex;gap:1px;flex:none}
+#clickable-prototype .cp-mem-stars button{border:0;background:none;padding:0 1px;font-size:17px;line-height:1;color:#ddd6fb;cursor:pointer}
+#clickable-prototype .cp-mem-stars button.is-on{color:#f2b33d}
+#clickable-prototype .cp-mori-msg:has(.cp-mem-tpl){width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+#clickable-prototype .cp-mori-msg:has(.cp-mem-tpl) .cp-mori-body{min-width:0;width:0;flex:1 1 auto;max-width:calc(100% - 30px)}
+#clickable-prototype .cp-mem-tpl{box-sizing:border-box;max-width:100%;overflow:hidden}
+#clickable-prototype .cp-mem-rate{flex-wrap:wrap;row-gap:0}
+#clickable-prototype .cp-mem-rate>span:first-child{white-space:normal;flex:1 1 90px}
+#clickable-prototype .cp-mem-stars button{font-size:15px}
 </style>
 <section id="clickable-prototype" aria-label="Clickable Bindory prototype">
   <div class="cp-shell">
@@ -3521,9 +3558,107 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       case 'after-auth': lockActions(el); setTimeout(runAfterAuth, 0); break; /* runs once this action releases Mori */
     }
   }
+  /* ---- Log a new memory: Mori opens a fresh chat with a fill-in template. Tap a [blank], type, Enter.
+     ((...)) is an optional part, left out when its blank is empty. "Add how it felt" holds feelings and ratings. ---- */
+  const MEM_TEMPLATES = {
+    trade: { label: 'A trade', text: 'I traded my {give:card name} {givenum:card number} with {who:@user} for {got:card name} {gotnum:card number} at {where:location} on {when:date}.',
+      rates: [['trade', 'The trade'], ['partner', 'Trade partner']] },
+    pull: { label: 'A pull', text: 'I pulled {got:card name} {gotnum:card number} from {pack:set or pack}(( with {who?:@user})) at {where:location} on {when:date}.',
+      rates: [['pull', 'The pull'], ['collection', 'The collection']] },
+    event: { label: 'A show or event', text: 'I went to {event:event name} in {where:location} on {when:date}(( with {who?:@user})).',
+      rates: [['event', 'The event'], ['organizer', 'The organizer']] }
+  };
+  const MEM_FEELINGS = ['Excited', 'Grateful', 'Nostalgic', 'Proud', 'Lucky', 'Relieved', 'Nervous', 'Bittersweet'];
+  const memSlot = (slot, ph, optional) => '<button type="button" class="cp-mem-slot' + (optional ? ' is-optional' : '') + '" data-mem-slot="' + slot + '" data-mem-ph="' + ph + '">[' + ph + ']</button>';
+  const memSentence = key => esc(MEM_TEMPLATES[key].text)
+    .replace(/\(\((.*?)\)\)/g, '<span class="cp-mem-opt">$1</span>')
+    .replace(/\{(\w+)(\?)?:([^}]+)\}/g, (m, slot, opt, ph) => memSlot(slot, ph, !!opt));
+  const memStars = (key, label) => '<div class="cp-mem-rate" data-mem-rate="' + key + '"><span' + (key === 'partner' ? ' data-mem-partner-label' : '') + '>' + esc(label) + '</span><span class="cp-mem-stars">' +
+    [1, 2, 3, 4, 5].map(n => '<button type="button" data-mem-star="' + n + '" aria-label="' + n + ' of 5">★</button>').join('') + '</span></div>';
+  const memTemplateHTML = key => '<div class="cp-mem-tpl" data-mem-tpl="' + key + '">' +
+    '<div class="cp-mem-kinds">' + Object.entries(MEM_TEMPLATES).map(([k, t]) => '<button type="button" data-mem-kind="' + k + '"' + (k === key ? ' class="is-selected"' : '') + '>' + t.label + '</button>').join('') + '</div>' +
+    '<p class="cp-mem-text">' + memSentence(key) + '</p>' +
+    '<details class="cp-mem-more"><summary>Add how it felt <em>optional</em></summary>' +
+      '<small>I felt</small><div class="cp-mem-feels">' + MEM_FEELINGS.map(f => '<button type="button" data-mem-feel="' + f + '">' + f + '</button>').join('') + '</div>' +
+      '<p class="cp-mem-words">In my own words: ' + memSlot('words', 'a few words', true) + '</p>' +
+      '<small>Rate it</small>' + MEM_TEMPLATES[key].rates.map(([k, label]) => memStars(k, label)).join('') +
+    '</details>' +
+    '<p class="cp-mem-hint" data-mem-hint></p>' +
+    '<div class="cp-mori-actions"><button class="cp-mori-go" data-mem-save disabled>Save memory</button><button data-mem-own>Write my own</button></div></div>';
+  function memoryStart() {
+    if (P.current() !== 'mori') nav('mori');
+    reset();
+    app.dispatchEvent(new CustomEvent('cp:mori-new-chat'));
+    say('<p>Let’s save a memory. Tap each <b>highlighted part</b> and type your answer.</p>' + memTemplateHTML('trade'));
+    memHint(qs('[data-mem-tpl]', thread));
+  }
+  function memHint(tpl) {
+    if (!tpl) return;
+    const left = qsa('[data-mem-slot]:not(.is-filled):not(.is-optional)', tpl).length;
+    qs('[data-mem-hint]', tpl).textContent = left ? left + (left === 1 ? ' part' : ' parts') + ' left to fill in' : 'All set. Tap Save memory.';
+    qs('[data-mem-save]', tpl).disabled = left > 0;
+  }
+  function memEdit(slot) {
+    const tpl = slot.closest('[data-mem-tpl]');
+    if (tpl.classList.contains('is-done')) return;
+    const isUser = slot.dataset.memPh === '@user';
+    const inp = document.createElement('input');
+    inp.className = 'cp-mem-input';
+    inp.type = 'text';
+    inp.placeholder = slot.dataset.memSlot === 'when' ? 'e.g. 2 Nov 2026' : slot.dataset.memSlot.endsWith('num') ? 'e.g. 25/25' : slot.dataset.memPh;
+    inp.value = slot.dataset.memValue || (isUser ? '@' : '');
+    inp.size = Math.max(6, (slot.dataset.memValue || slot.dataset.memPh).length);
+    slot.hidden = true;
+    slot.after(inp);
+    inp.focus();
+    let done = false;
+    const finish = next => {
+      if (done) return; done = true;
+      let v = inp.value.trim();
+      if (isUser && v && !v.startsWith('@')) v = '@' + v;
+      if (isUser && v === '@') v = '';
+      if (v) { slot.dataset.memValue = v; slot.textContent = v; slot.classList.add('is-filled'); }
+      else { delete slot.dataset.memValue; slot.textContent = '[' + slot.dataset.memPh + ']'; slot.classList.remove('is-filled'); }
+      slot.hidden = false; inp.remove();
+      memHint(tpl);
+      if (next) {
+        // Next empty blank in the sentence after this one (the feelings section opens on its own).
+        const all = qsa('.cp-mem-text [data-mem-slot]', tpl), after = all.slice(all.indexOf(slot) + 1);
+        const empty = after.find(x => !x.classList.contains('is-filled'));
+        if (empty) memEdit(empty);
+      }
+    };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } if (e.key === 'Escape') { inp.value = slot.dataset.memValue || ''; finish(false); } });
+    inp.addEventListener('blur', () => finish(false));
+  }
+  function memText(tpl) {
+    // The sentence, without optional parts left empty, plus any feelings and ratings.
+    const sent = qs('.cp-mem-text', tpl).cloneNode(true);
+    qsa('.cp-mem-opt', sent).forEach(o => { if (!qs('.is-filled', o)) o.remove(); });
+    let text = sent.textContent.replace(/\s+/g, ' ').replace(/\s+([.,])/g, '$1').trim();
+    const feels = qsa('[data-mem-feel].is-selected', tpl).map(b => b.dataset.memFeel.toLowerCase());
+    if (feels.length) text += ' I felt ' + (feels.length > 1 ? feels.slice(0, -1).join(', ') + ' and ' + feels[feels.length - 1] : feels[0]) + '.';
+    const words = qs('[data-mem-slot="words"]', tpl);
+    if (words && words.dataset.memValue) text += ' In my own words: ' + words.dataset.memValue.replace(/[.\s]+$/, '') + '.';
+    qsa('[data-mem-rate]', tpl).forEach(r => {
+      const n = r.dataset.memRating; if (!n) return;
+      const who = qs('[data-mem-slot="who"]', tpl);
+      const what = { trade: 'the trade', pull: 'the pull', collection: 'the collection', event: 'the event', organizer: 'the organizer', partner: (who && who.dataset.memValue) || 'my trade partner' }[r.dataset.memRate];
+      text += ' I’d rate ' + what + ' ' + n + '/5' + (r.dataset.memRate === 'partner' ? ' as a trade partner' : '') + '.';
+    });
+    return text + ' Help me save this memory.';
+  }
+  function memSave(tpl) {
+    const text = memText(tpl);
+    tpl.classList.add('is-done');
+    qsa('button', tpl).forEach(b => { b.disabled = true; });
+    M.pending = null;
+    send(text);
+  }
+
   function openMori(promptKey) {
     if (P.current() !== 'mori') nav('mori');
-    if (promptKey === 'memory') { input.value = MEMORY_TEMPLATE; input.focus(); input.setSelectionRange(0, 0); toast('Edit the details, then send'); return; }
+    if (promptKey === 'memory') { memoryStart(); return; }
     if (promptKey === 'price' || promptKey === 'grade' || promptKey === 'add') { cardStart(promptKey); return; }
     if (promptKey === 'order') { orderStart(); return; }
     if (PROMPT_TEXT[promptKey]) send(PROMPT_TEXT[promptKey]);
@@ -3562,6 +3697,22 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     if ('moriReset' in d) { reset(); return; }
     if ('moriImage' in d) { if (M.attachment) clearAttachment(); else { setAttachment(M.pending === 'memory-details' && M.mem ? M.mem.got : scanCandidate()); input.focus(); } return; }
     if ('moriClearAttachment' in d) { clearAttachment(); return; }
+    if (d.memSlot) { memEdit(el); return; }
+    if (d.memFeel) { if (!el.closest('.is-done')) el.classList.toggle('is-selected'); return; }
+    if (d.memStar) {
+      const r = el.closest('[data-mem-rate]'); if (!r || el.closest('.is-done')) return;
+      r.dataset.memRating = r.dataset.memRating === d.memStar ? '' : d.memStar;
+      qsa('[data-mem-star]', r).forEach(b => b.classList.toggle('is-on', +b.dataset.memStar <= +(r.dataset.memRating || 0)));
+      return;
+    }
+    if (d.memKind) {
+      const tpl = el.closest('[data-mem-tpl]'); if (!tpl || tpl.classList.contains('is-done')) return;
+      tpl.outerHTML = memTemplateHTML(d.memKind);
+      memHint(qsa('[data-mem-tpl]', thread).pop());
+      return;
+    }
+    if ('memSave' in d) { if (!M.busy) memSave(el.closest('[data-mem-tpl]')); return; }
+    if ('memOwn' in d) { const tpl = el.closest('[data-mem-tpl]'); tpl.classList.add('is-done'); qsa('button', tpl).forEach(b => { b.disabled = true; }); input.value = ''; input.placeholder = 'Tell me the story in your own words'; input.focus(); return; }
     if (d.orderSide || d.orderDays) {
       // Buy/Sell and 7/30/90 days toggles in the order editor.
       qsa('button', el.parentElement).forEach(b => b.classList.toggle('is-selected', b === el));
@@ -3902,7 +4053,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
     noticeSeen.add(name); /* a deck slide opens on its screen without a pop-up covering it */
     if (name === 'collection' && detail) L.colTab = detail;
     if (protoEl) protoEl.scrollIntoView = () => {};
-    if (name === 'mori') { nav('mori'); reset(); if (detail === 'memory') input.value = MEMORY_TEMPLATE; else if (PROMPT_TEXT[detail]) send(PROMPT_TEXT[detail]); }
+    if (name === 'mori') { nav('mori'); reset(); if (detail === 'memory') memoryStart(); else if (PROMPT_TEXT[detail]) send(PROMPT_TEXT[detail]); }
     else nav(name);
     if (protoEl) delete protoEl.scrollIntoView;
   };
@@ -4199,6 +4350,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   // messages after this time). A few seconds back, so a slightly fast phone clock cannot hide the first message.
   let chatSince = new Date(Date.now() - 5000).toISOString();
   app.addEventListener("click", (e) => { if (e.target.closest("[data-mori-reset]")) chatSince = new Date(Date.now() - 5000).toISOString(); }, true);
+  app.addEventListener("cp:mori-new-chat", () => { chatSince = new Date().toISOString(); });
 
   // Called from the wireframe's own route() (patched at build time) for typed and tapped messages.
   window.bdLiveRoute = async (text, ui) => {
