@@ -1567,6 +1567,26 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
 #clickable-prototype .cp-mem-datepick select{-webkit-appearance:none;appearance:none;padding:0 16px 0 7px;background:#f8f6ff url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2710%27 height=%276%27%3E%3Cpath d=%27M1 1l4 4 4-4%27 fill=%27none%27 stroke=%27%236250d8%27 stroke-width=%271.6%27/%3E%3C/svg%3E") no-repeat right 5px center;font-size:10.5px}
 #clickable-prototype .cp-mem-datepick{position:relative}
 #clickable-prototype .cp-mem-datepick button{position:absolute;right:8px;bottom:8px;height:26px;padding:0 14px}
+
+/* Memory card: blanks are light grey boxes (label without brackets), filled ones read as normal text.
+   One text size (10px) for everything you read or tap; 8px only for the small uppercase labels. */
+#clickable-prototype .cp-mem-tpl .cp-mem-slot,#clickable-prototype .cp-mem-tpl .cp-mem-slot.is-optional{display:inline-block;border:1px solid #e3e1ea;border-bottom:1px solid #e3e1ea;background:#f4f3f8;color:#a7a4b5;border-radius:6px;padding:1px 7px;font:inherit;font-size:10px;font-weight:600;line-height:1.6;cursor:pointer;vertical-align:baseline}
+#clickable-prototype .cp-mem-tpl .cp-mem-slot:hover{background:#eeedf4;border-color:#d6d3e2}
+#clickable-prototype .cp-mem-tpl .cp-mem-slot.is-filled{background:#fff;border-color:#d9d4ee;color:var(--mori-ink);font-weight:700}
+#clickable-prototype .cp-mem-tpl .cp-mem-slot.is-editing{outline:1.5px solid #6250d8;outline-offset:1px}
+#clickable-prototype .cp-mem-tpl .cp-mem-input{font-size:10px;line-height:1.6;padding:1px 7px;border:1px solid #6250d8;border-radius:6px}
+#clickable-prototype .cp-mem-tpl .cp-mem-input::placeholder{color:#b9b6c6;font-weight:600}
+#clickable-prototype .cp-mem-tpl .cp-mem-text,#clickable-prototype .cp-mem-tpl .cp-mem-words{font-size:10px;line-height:2.1;margin:0}
+#clickable-prototype .cp-mem-tpl .cp-mem-words{margin-top:6px}
+#clickable-prototype .cp-mem-tpl .cp-mem-kinds button,#clickable-prototype .cp-mem-tpl .cp-mem-feels button,#clickable-prototype .cp-mem-tpl .cp-mem-more summary,#clickable-prototype .cp-mem-tpl .cp-mem-rate>span:first-child,#clickable-prototype .cp-mem-tpl .cp-mori-actions button,#clickable-prototype .cp-mem-tpl .cp-mem-datepick select,#clickable-prototype .cp-mem-tpl .cp-mem-datepick button{font-size:10px}
+#clickable-prototype .cp-mem-tpl .cp-mem-hint,#clickable-prototype .cp-mem-tpl .cp-mem-more summary em{font-size:9px}
+#clickable-prototype .cp-mem-tpl .cp-mem-more>small,#clickable-prototype .cp-mem-tpl .cp-mem-datepick small{font-size:8px}
+#clickable-prototype .cp-mem-tpl .cp-mem-stars button{font-size:15px}
+
+/* $ and @ as a fixed prefix inside the typing box. */
+#clickable-prototype .cp-mem-tpl .cp-mem-field{display:inline-flex;align-items:center;max-width:100%;border:1px solid #6250d8;border-radius:6px;background:#fff;padding:0 0 0 7px;vertical-align:baseline;box-shadow:0 0 0 3px #6250d822}
+#clickable-prototype .cp-mem-tpl .cp-mem-field b{font-size:10px;font-weight:800;color:var(--mori-ink);line-height:1.6}
+#clickable-prototype .cp-mem-tpl .cp-mem-field .cp-mem-input{border:0;box-shadow:none;padding:1px 7px 1px 1px;min-width:0;background:none}
 </style>
 <section id="clickable-prototype" aria-label="Clickable Bindory prototype">
   <div class="cp-shell">
@@ -3592,7 +3612,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   /* ---- Log a new memory: Mori opens a fresh chat with a fill-in template. Tap a [blank], type, Enter.
      ((...)) is an optional part, left out when its blank is empty. "Add how it felt" holds feelings and ratings. ---- */
   const MEM_TEMPLATES = {
-    trade: { label: 'A trade', text: 'I traded my {give:card name} {givenum:card number} with {who:@user} for {got:card name} {gotnum:card number} at {where:location} on {when:date}.',
+    trade: { label: 'A trade', text: 'I traded my {give:card name} {givenum:card number} with {who:@user} for {got:card name} {gotnum:card number}(( and added {cash?:amount})) at {where:location} on {when:date}.',
       rates: [['trade', 'The trade'], ['partner', 'Trade partner']] },
     pull: { label: 'A pull', text: 'I pulled {got:card name} {gotnum:card number} from {pack:set or pack}(( with {who?:@user})) at {where:location} on {when:date}.',
       rates: [['pull', 'The pull'], ['collection', 'The collection']] },
@@ -3600,7 +3620,8 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
       rates: [['event', 'The event'], ['organizer', 'The organizer']] }
   };
   const MEM_FEELINGS = ['Excited', 'Grateful', 'Nostalgic', 'Proud', 'Lucky', 'Relieved', 'Nervous', 'Bittersweet'];
-  const memSlot = (slot, ph, optional) => '<button type="button" class="cp-mem-slot' + (optional ? ' is-optional' : '') + '" data-mem-slot="' + slot + '" data-mem-ph="' + ph + '">[' + ph + ']</button>';
+  const memLabel = ph => ph === 'amount' ? '$ amount' : ph;
+  const memSlot = (slot, ph, optional) => '<button type="button" class="cp-mem-slot' + (optional ? ' is-optional' : '') + '" data-mem-slot="' + slot + '" data-mem-ph="' + ph + '">' + memLabel(ph) + '</button>';
   const memSentence = key => esc(MEM_TEMPLATES[key].text)
     .replace(/\(\((.*?)\)\)/g, '<span class="cp-mem-opt">$1</span>')
     .replace(/\{(\w+)(\?)?:([^}]+)\}/g, (m, slot, opt, ph) => memSlot(slot, ph, !!opt));
@@ -3632,26 +3653,40 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
   function memEdit(slot) {
     const tpl = slot.closest('[data-mem-tpl]');
     if (tpl.classList.contains('is-done')) return;
-    const isUser = slot.dataset.memPh === '@user', isDate = slot.dataset.memSlot === 'when';
+    const isUser = slot.dataset.memPh === '@user', isDate = slot.dataset.memSlot === 'when', isCash = slot.dataset.memSlot === 'cash';
     if (isDate) { memDatePick(slot, tpl); return; }
     const inp = document.createElement('input');
     inp.className = 'cp-mem-input';
     inp.type = 'text';
     inp.placeholder = slot.dataset.memSlot === 'when' ? 'e.g. 2 Nov 2026' : slot.dataset.memSlot.endsWith('num') ? 'e.g. 25/25' : slot.dataset.memPh;
-    inp.value = slot.dataset.memValue || (isUser ? '@' : '');
+    // $ and @ sit in the box as a fixed prefix, so they are always there and cannot be deleted.
+    const prefix = isCash ? '$' : isUser ? '@' : '';
+    const bare = v => (v || '').replace(/^[$@\s]+/, '');
+    inp.value = prefix ? bare(slot.dataset.memValue) : (slot.dataset.memValue || '');
+    if (isCash) { inp.inputMode = 'decimal'; inp.placeholder = '50'; }
+    if (isUser) { inp.placeholder = 'username'; inp.autocapitalize = 'none'; inp.autocomplete = 'off'; }
     inp.size = Math.max(6, (slot.dataset.memValue || slot.dataset.memPh).length);
     slot.hidden = true;
-    slot.after(inp);
+    let field = inp;
+    if (prefix) {
+      field = document.createElement('span');
+      field.className = 'cp-mem-field';
+      field.innerHTML = '<b>' + prefix + '</b>';
+      field.append(inp);
+      field.addEventListener('mousedown', e => { if (e.target !== inp) { e.preventDefault(); inp.focus(); } });
+    }
+    slot.after(field);
     inp.focus();
     let done = false;
     const finish = next => {
       if (done) return; done = true;
-      let v = inp.value.trim();
-      if (isUser && v && !v.startsWith('@')) v = '@' + v;
-      if (isUser && v === '@') v = '';
+      let v = prefix ? bare(inp.value.trim()) : inp.value.trim();
+      if (isCash) v = v.replace(/[^0-9.,]/g, '');
+      if (isUser) v = v.replace(/\s+/g, '');
+      if (v && prefix) v = prefix + v;
       if (v) { slot.dataset.memValue = v; slot.textContent = v; slot.classList.add('is-filled'); }
-      else { delete slot.dataset.memValue; slot.textContent = '[' + slot.dataset.memPh + ']'; slot.classList.remove('is-filled'); }
-      slot.hidden = false; inp.remove();
+      else { delete slot.dataset.memValue; slot.textContent = memLabel(slot.dataset.memPh); slot.classList.remove('is-filled'); }
+      slot.hidden = false; field.remove();
       memHint(tpl);
       if (next) {
         // Next empty blank in the sentence after this one (the feelings section opens on its own).
@@ -3660,7 +3695,7 @@ body[data-mode="dark"] #clickable-prototype .cp-mori-askbar{background:linear-gr
         if (empty) memEdit(empty);
       }
     };
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } if (e.key === 'Escape') { inp.value = slot.dataset.memValue || ''; finish(false); } });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } if (e.key === 'Escape') { inp.value = prefix ? bare(slot.dataset.memValue) : (slot.dataset.memValue || ''); finish(false); } });
     inp.addEventListener('blur', () => finish(false));
   }
   const MEM_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
